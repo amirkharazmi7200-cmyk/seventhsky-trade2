@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": "test-alert-20260817-01",
+    "company": "TEST Buyer Indonesia",
+    "country": "Indonesia",
+    "product": "Iranian Dates",
+    "qty": "1 x 20ft Container",
+    "source": "SYSTEM TEST",
+    "sourceUrl": "",
+    "contact": "Test only - do not contact",
+    "score": "A",
+    "status": "action",
+    "follow": "2026-08-17",
+    "next": "TEST: Verify dashboard alert and lead card",
+    "message": "This is a system test lead. Do not send this message.",
+    "notes": "TEST DATA ONLY. Created to verify Radar Feed -> Dashboard -> Alerts end-to-end flow.",
+    "created": "2026-08-17T16:09:00+03:30",
+    "lastUpdate": "2026-08-17T16:09:00+03:30"
+  }
+]
