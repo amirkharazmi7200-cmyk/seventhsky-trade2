@@ -106,5 +106,23 @@
     "notes": "High product/origin fit: Volza's Mazafati buyer dataset, current as of 2026-06-04, ranks PT Sakti Abadi Kilat as the largest identified Indonesian Mazafati buyer with 15 shipments, sourcing from one country; displayed recent sample records show Iranian Mazafati cargoes of roughly 23.9 tonnes on 2025-02-18. D&B identifies the company as SAK Fruits, a grocery/fresh-fruit wholesaler. No fresh public RFQ was found and visible shipment samples are from 2025, so this is a promising B lead requiring immediate revalidation, not an A lead.",
     "created": "2026-08-17T19:59:36+03:30",
     "lastUpdate": "2026-08-17T19:59:36+03:30"
+  },
+  {
+    "id": "web-id-green-diamond-iran-dates-20260817",
+    "company": "PT. Kurma Green Diamond",
+    "country": "Indonesia",
+    "product": "Iranian dates already in portfolio: Mazafati (Rotab Bam) and Piarom/Mariami; handles moist and semi-dry dates",
+    "qty": "No public RFQ quantity; wholesale, retail, bulk and private-label supply are advertised",
+    "source": "Official Green Diamond company website",
+    "sourceUrl": "https://greendiamond.co.id/en",
+    "contact": "WhatsApp +62 823-4350-8579; official website contact page / WhatsApp",
+    "score": "B",
+    "status": "action",
+    "follow": "2026-08-18",
+    "next": "WhatsApp the official number and ask specifically for the purchasing/import manager. Confirm whether they are sourcing Iranian-origin dates for the upcoming buying cycle and whether they are open to reviewing Kabkab, Zahedi, Mazafati or other Iranian options subject to verified availability. Ask required grade, packing, volume and target arrival period before quoting.",
+    "message": "Dear Green Diamond team, Seventh Sky Trade is an Iranian dates export company. We saw that you directly import dates from Iran and currently handle Iranian Mazafati and Piarom/Mariami in Jakarta. We would like to connect with your purchasing or import manager to ask whether you are reviewing Iranian-origin supply for an upcoming buying cycle. If yes, please share the varieties, grades, packing formats, expected volume and target arrival period you are considering, and we can check suitable options subject to current availability and specifications. Best regards, Seventh Sky Trade",
+    "notes": "Current official-site evidence is strong: the company identifies itself as a direct importer/distributor in Greater Jakarta, explicitly says it imports first-hand from Iran, lists Iranian Mazafati from Bam and Piarom/Mariami from Hajiabad, handles cold chain for moist Mazafati, and offers wholesale/bulk plus OEM/private-label packaging. No current procurement RFQ is public, so B rather than A. A second current site, BoronganKurma.co.id, uses the same Cakung address and WhatsApp number while advertising Iranian Piarom; treat that storefront as the same operational contact for deduplication rather than a separate lead.",
+    "created": "2026-08-17T23:57:36+03:30",
+    "lastUpdate": "2026-08-17T23:57:36+03:30"
   }
 ]
