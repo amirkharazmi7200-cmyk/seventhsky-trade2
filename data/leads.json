@@ -70,5 +70,41 @@
     "notes": "Verified RFQ dated 2026-05-08; explicitly requires Iranian Zahidi; 100 tons; CIF India; suppliers from Iran only. Excellent origin/product fit and unusually large volume, but the lead is older than the Jul-2026 RFQs and should be revalidated immediately. Requested payment is bank transfer at arrival, which exposes the seller to material credit risk and should be renegotiated or secured before commitment.",
     "created": "2026-08-17T19:55:37+03:30",
     "lastUpdate": "2026-08-17T19:55:37+03:30"
+  },
+  {
+    "id": "volza-id-exindokarsa-dates-20260331",
+    "company": "PT Exindokarsa Agung",
+    "country": "Indonesia",
+    "product": "Imported dates; broad date portfolio including retail and wholesale lines",
+    "qty": "Not stated; Volza identifies Exindokarsa as Indonesia's highest-volume HS 08041000 dates buyer in its Mar-31-2026 dataset, with 363 shipments",
+    "source": "Volza Indonesia dates import analytics + official Exindokarsa/Allkurma public contact presence",
+    "sourceUrl": "https://www.volza.com/p/dates/buyers/buyers-in-indonesia/hsn-code-08041000/",
+    "contact": "Official PT Exindokarsa Agung Linktree (allkurmaindonesia) Customer Care; public company phones also listed in IndonesiaYP: +62 21 819 1908 / 819 7780 / 819 9565 / 819 9566",
+    "score": "B",
+    "status": "action",
+    "follow": "2026-08-18",
+    "next": "Open the official allkurmaindonesia Linktree and use Customer Care to ask for the purchasing/import manager. Introduce Seventh Sky as an Iranian dates exporter and ask whether they are currently reviewing Iranian-origin semi-dry or soft-date supply for the next buying cycle. Do not quote a variety until availability/specifications are verified.",
+    "message": "Dear PT Exindokarsa Agung team, Seventh Sky Trade is an Iranian dates export company. We understand that your company is an established Indonesian importer and distributor of dates, and we would like to explore whether you are currently reviewing Iranian-origin date supply for an upcoming purchasing cycle. We can present suitable Iranian options subject to current availability, required grade, packing format and destination requirements. Could you please connect us with your purchasing or import manager? Best regards, Seventh Sky Trade",
+    "notes": "Commercial evidence is strong: Volza's Indonesia HS 08041000 buyer analytics, current as of 2026-03-31, names Exindokarsa as a leading buyer with 363 shipments. The company's official allkurmaindonesia Linktree is live and provides Customer Care; SIAL/EastFood exhibitor records identify it as a date importer/distributor. No current public RFQ or Iran-specific requirement was found, so B rather than A. Public phone directory data is older and should be treated as secondary; prefer official Customer Care first.",
+    "created": "2026-08-17T19:59:36+03:30",
+    "lastUpdate": "2026-08-17T19:59:36+03:30"
+  },
+  {
+    "id": "volza-id-sakti-mazafati-20260604",
+    "company": "PT Sakti Abadi Kilat (SAK Fruits)",
+    "country": "Indonesia",
+    "product": "Iranian Mazafati dates",
+    "qty": "Historical recent sample shipments around 23.9 tonnes each; 15 Mazafati import shipments recorded by Volza",
+    "source": "Volza Mazafati Dates Buyers in Indonesia + D&B company profile",
+    "sourceUrl": "https://www.volza.com/p/mazafati-dates/buyers/buyers-in-indonesia/",
+    "contact": "Volza company profile contact route (free registration required to unlock phone/email/LinkedIn); company address: Rukan Nirwana Sunter Asri Tahap III, Jl. Sunter Paradise 23 Blok J-2, North Jakarta",
+    "score": "B",
+    "status": "action",
+    "follow": "2026-08-18",
+    "next": "Open the Volza PT Sakti Abadi Kilat company profile, complete the free registration to reveal a current decision-maker contact, then ask for the purchasing/import manager and confirm whether Iranian Mazafati purchasing is active for the upcoming season before offering anything.",
+    "message": "Dear PT Sakti Abadi Kilat team, Seventh Sky Trade is an Iranian dates export company. We found evidence that your company has imported Iranian Mazafati dates into Indonesia and would like to ask whether you are currently planning any new Iranian date purchases. If so, please share the required grade, packing format, volume and target arrival period, and we can check suitable supply options subject to current availability and specifications. Best regards, Seventh Sky Trade",
+    "notes": "High product/origin fit: Volza's Mazafati buyer dataset, current as of 2026-06-04, ranks PT Sakti Abadi Kilat as the largest identified Indonesian Mazafati buyer with 15 shipments, sourcing from one country; displayed recent sample records show Iranian Mazafati cargoes of roughly 23.9 tonnes on 2025-02-18. D&B identifies the company as SAK Fruits, a grocery/fresh-fruit wholesaler. No fresh public RFQ was found and visible shipment samples are from 2025, so this is a promising B lead requiring immediate revalidation, not an A lead.",
+    "created": "2026-08-17T19:59:36+03:30",
+    "lastUpdate": "2026-08-17T19:59:36+03:30"
   }
 ]
