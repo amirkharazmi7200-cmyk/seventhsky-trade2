@@ -16,5 +16,23 @@
     "notes": "TEST DATA ONLY. Created to verify Radar Feed -> Dashboard -> Alerts end-to-end flow.",
     "created": "2026-08-17T16:09:00+03:30",
     "lastUpdate": "2026-08-17T16:09:00+03:30"
+  },
+  {
+    "id": "g4wb-my-jerry-kimia-20260730",
+    "company": "Mr. Jerry / company not public",
+    "country": "Malaysia",
+    "product": "Dates — Kimia, Medjool, Ajwa, etc.; conventional",
+    "qty": "1 x 40ft container",
+    "source": "go4WorldBusiness verified buy lead",
+    "sourceUrl": "https://www.go4worldbusiness.com/buyers/dates.html",
+    "contact": "Go4WorldBusiness Inquire Now / platform messaging (buyer contact: Mr. Jerry)",
+    "score": "A",
+    "status": "action",
+    "follow": "2026-08-17",
+    "next": "Open the go4WorldBusiness lead and click Inquire Now. Confirm whether Kimia/Mazafati is acceptable, exact grade/packing, target arrival date, and negotiate safer payment security because requested terms are TT 21 days after arrival.",
+    "message": "Dear Mr. Jerry, we are an Iranian dates export company and saw your requirement for one 40ft container of conventional dates to Klang, including Kimia and other varieties. We can review suitable Iranian date options for your requirement and prepare a CNF Klang offer once you confirm the preferred variety, grade, packing format and target arrival date. Please also let us know whether Iranian Kimia/Mazafati is acceptable for this order. Best regards, Seventh Sky Trade",
+    "notes": "Fresh verified RFQ dated 2026-07-30. Destination Klang, Malaysia; CNF; suppliers accepted worldwide, so Iran is not excluded. Strong commercial intent due full 40ft quantity and specific payment/shipping terms. Payment requested as TT 21 days after arrival creates seller credit risk and should not be accepted without appropriate security/negotiation. Do not claim Kimia/Mazafati stock until availability is verified.",
+    "created": "2026-08-17T16:12:56+03:30",
+    "lastUpdate": "2026-08-17T16:12:56+03:30"
   }
 ]
