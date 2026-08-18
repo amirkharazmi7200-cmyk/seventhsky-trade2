@@ -124,5 +124,23 @@
     "notes": "Current official-site evidence is strong: the company identifies itself as a direct importer/distributor in Greater Jakarta, explicitly says it imports first-hand from Iran, lists Iranian Mazafati from Bam and Piarom/Mariami from Hajiabad, handles cold chain for moist Mazafati, and offers wholesale/bulk plus OEM/private-label packaging. No current procurement RFQ is public, so B rather than A. A second current site, BoronganKurma.co.id, uses the same Cakung address and WhatsApp number while advertising Iranian Piarom; treat that storefront as the same operational contact for deduplication rather than a separate lead.",
     "created": "2026-08-17T23:57:36+03:30",
     "lastUpdate": "2026-08-17T23:57:36+03:30"
+  },
+  {
+    "id": "web-in-amsons-iran-dates-20260818",
+    "company": "AM Sons Impex Pvt Ltd (AMS Group)",
+    "country": "India",
+    "product": "Iranian dates; current retail/import portfolio includes Mazafati/Kimia and Zahidi, plus other origins",
+    "qty": "No public RFQ quantity; established bulk importer/distributor with bulk inquiry channel",
+    "source": "Official AM Sons Impex website + current Indian retail listings naming AM Sons as importer",
+    "sourceUrl": "https://amsonsimpex.com/",
+    "contact": "Bulk inquiries: +91 94433 36879; customercare.mumbai@amsonsimpex.com; Mumbai +91 73737 88687; Tamil Nadu +91 99943 00818",
+    "score": "B",
+    "status": "action",
+    "follow": "2026-08-18",
+    "next": "Contact the bulk-inquiry number or Mumbai email and ask for the purchasing/import manager responsible for Iranian dates. Confirm the next buying window, required varieties, grade, pack sizes, volume and destination before offering. Current retail evidence shows Mazafati and seedless Zahidi lines, but do not claim Seventh Sky stock until availability is verified.",
+    "message": "Dear AM Sons Impex team, Seventh Sky Trade is an Iranian dates export company. We saw that AM Sons is an established importer and distributor of Iranian dates in India, with current Mazafati/Kimia and Zahidi lines in the market. We would like to connect with the purchasing manager responsible for Iranian-origin dates and ask about your next sourcing cycle. Please share the varieties, grades, packing formats, expected volume and target delivery period you are currently considering, and we can review suitable supply options subject to current availability and specifications. Best regards, Seventh Sky Trade",
+    "notes": "Strong current commercial evidence. The official AM Sons site describes the company as a leading dates importer/distributor, has a dedicated IRAN DATES category, King Kimia/King Mazafati/King Zahdi brands and a bulk-inquiry contact. Indian 1mg listings updated 25-27 Jul 2026 name AM Sons Impex Pvt Ltd as importer for Farmkin Mazafati and seedless Zahidi products, confirming active recent handling of precisely relevant Iranian-style varieties. No public live RFQ/quantity was found, so B rather than A. Iran is explicitly an accepted origin in the company's portfolio.",
+    "created": "2026-08-18T03:52:55+03:30",
+    "lastUpdate": "2026-08-18T03:52:55+03:30"
   }
 ]
