@@ -250,5 +250,23 @@
     "notes": "Verified RFQ dated 2026-06-22. Quantity 5 MT, CIF India, L/C, suppliers accepted worldwide. Strong product and payment fit; Iran is not excluded. The requirement is distinct from the existing Ranu Kumari 5-ton Kimia lead because the buyer identity and RFQ are separate. Revalidate promptly because the posting is roughly eight weeks old.",
     "created": "2026-08-18T23:54:44+03:30",
     "lastUpdate": "2026-08-18T23:54:44+03:30"
+  },
+  {
+    "id": "volza-id-cipta-anugerah-mazafati-20260819",
+    "company": "PT Cipta Anugerah Berjaya",
+    "country": "Indonesia",
+    "product": "Imported dates (HS 08041000), including Mazafati; historical Iranian Mazafati cargoes",
+    "qty": "No public RFQ quantity; Volza lists 5 Mazafati import shipments for the PT entity and shows the company as an active importer with 674 total import shipments",
+    "source": "Volza Indonesia Mazafati buyer analytics + Volza company profile + Indonesia company registry",
+    "sourceUrl": "https://www.volza.com/company-profile/pt-cipta-anugerah-berjaya-575728/",
+    "contact": "Volza decision-maker/contact page (free registration required to unlock verified phone/email/LinkedIn). Registered address: Jl. R.E. Martadinata, Pergudangan Caraka Martadinata Blok M, North Jakarta. A registry-directory page lists 021-65834771 as user-contributed and unverified; use only as a fallback after Volza/official verification.",
+    "score": "B",
+    "status": "action",
+    "follow": "2026-08-19",
+    "next": "Open the Volza PT Cipta Anugerah Berjaya contact page and complete the free registration to unlock a current purchasing/import decision-maker. Ask whether they are planning Iranian-origin date purchases for the next buying cycle, then confirm variety, grade, packing, volume and target arrival period before offering. Treat Cipta Anugerah Berjaya without the PT prefix as the same company for deduplication.",
+    "message": "Dear PT Cipta Anugerah Berjaya team, Seventh Sky Trade is an Iranian dates export company. We found trade evidence that your company has imported dates under HS 08041000, including Mazafati, and we would like to ask whether you are reviewing Iranian-origin date supply for an upcoming purchasing cycle. If so, please share the varieties, grades, packing formats, expected volume and target arrival period you are considering, and we can review suitable options subject to current availability and specifications. Best regards, Seventh Sky Trade",
+    "notes": "Strong Indonesia target but no current public RFQ, so B rather than A. Volza's Indonesia Mazafati buyer page (current 04-Jun-2026) lists PT Cipta Anugerah Berjaya with 5 Mazafati shipments; another alias entry without the PT prefix shows additional Mazafati activity, including March 2025 cargoes of roughly 22.5-22.8 tonnes identified as KURMA IRAN. The company profile, updated from Indonesia trade data through 17-Jul-2026, shows 674 total import shipments from 109 suppliers and includes HS 08041000 among its primary import products. Indonesia registry sources confirm the legal company and North Jakarta address. Contact details are gated, so human login is required; do not use the unverified directory phone as primary outreach.",
+    "created": "2026-08-19T03:55:38+03:30",
+    "lastUpdate": "2026-08-19T03:55:38+03:30"
   }
 ]
