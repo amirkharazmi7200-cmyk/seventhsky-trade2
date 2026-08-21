@@ -1,0 +1,58 @@
+name: Merge incoming leads
+
+on:
+  push:
+    paths:
+      - 'data/incoming-leads/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge incoming lead files
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, glob, os
+          feed_path='data/leads.json'
+          with open(feed_path, encoding='utf-8') as f:
+              feed=json.load(f)
+          by_id={x.get('id'): i for i,x in enumerate(feed) if x.get('id')}
+          changed=False
+          for path in sorted(glob.glob('data/incoming-leads/*.json')):
+              with open(path, encoding='utf-8') as f:
+                  item=json.load(f)
+              items=item if isinstance(item,list) else [item]
+              for lead in items:
+                  lid=lead.get('id')
+                  if not lid:
+                      raise SystemExit(f'Missing id in {path}')
+                  if lid in by_id:
+                      feed[by_id[lid]]=lead
+                  else:
+                      by_id[lid]=len(feed)
+                      feed.append(lead)
+                  changed=True
+              os.remove(path)
+          if changed:
+              with open(feed_path,'w',encoding='utf-8') as f:
+                  json.dump(feed,f,ensure_ascii=False,indent=2)
+                  f.write('\n')
+          PY
+      - name: Commit merged feed
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'seventh-sky-radar-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add data/leads.json data/incoming-leads || true
+          git commit -m 'Merge incoming lead feed updates'
+          git push
