@@ -412,5 +412,23 @@
     "notes": "Fresh verified RFQ dated 2026-08-17. Quantity is one 20ft container, CIF Netherlands, suppliers accepted worldwide. Payment terms shown are L/C or bank transfer after arrival; the latter creates seller credit risk, so L/C or another secure structure should be preferred. The named request is Ajwa/Medjool/etc., so Iranian varieties must be proposed only as alternatives after the buyer confirms origin and variety flexibility. This buyer also posted other same-day food import RFQs to the Netherlands, which is consistent with active procurement but should not be treated as proof of company identity. Score A due very recent verified container-scale requirement, open worldwide sourcing, and clear shipping/payment terms.",
     "created": "2026-08-21T20:03:18+03:30",
     "lastUpdate": "2026-08-21T20:03:18+03:30"
+  },
+  {
+    "id": "g4wb-uk-mohammed-usman-dates-20260813",
+    "company": "Mohammed Usman Ansari / company not public",
+    "country": "United Kingdom",
+    "product": "Dates — Ajwa, Medjool; buyer requests catalogs and prices first; Iranian alternatives require confirmation",
+    "qty": "1 LCL",
+    "source": "go4WorldBusiness verified buy lead",
+    "sourceUrl": "https://www.go4worldbusiness.com/buyers/europe/members/dates.html",
+    "contact": "Go4WorldBusiness Inquire Now / platform messaging (buyer contact: Mohammed Usman Ansari)",
+    "score": "B",
+    "status": "action",
+    "follow": "2026-08-22",
+    "next": "Open the verified Aug-13-2026 go4WorldBusiness lead and click Inquire Now. Ask whether Iranian-origin dates and alternative varieties beyond Ajwa/Medjool are acceptable before sending a catalog or price. Confirm preferred texture/moisture, grade/size, pack format, approximate LCL weight, UK destination port and target arrival date. Do not claim any Seventh Sky variety, stock, certification or price until verified.",
+    "message": "Dear Mr. Ansari, we saw your verified requirement for an LCL shipment of dates to the United Kingdom and your request to receive catalogs and prices first. Seventh Sky Trade is an Iranian dates export company, and we would like to check whether Iranian-origin date alternatives may also be considered for your requirement. If yes, please share your preferred product profile, grade/size, packing format, approximate shipment weight, destination port and target arrival date. We can then review suitable options subject to current availability and specifications. Best regards, Seventh Sky Trade",
+    "notes": "Fresh verified RFQ dated 2026-08-13. Buyer requests Ajwa and Medjool dates, CIF United Kingdom, L/C payment, one LCL shipment, and accepts suppliers worldwide, so Iran is not excluded. The requirement is commercially credible but smaller than a full container and does not explicitly request Iranian varieties, so score B rather than A. Platform messaging is the available contact route. Deduplication against the current GitHub feed found no existing Mohammed Usman Ansari record.",
+    "created": "2026-08-22T11:53:04+03:30",
+    "lastUpdate": "2026-08-22T11:53:04+03:30"
   }
 ]
