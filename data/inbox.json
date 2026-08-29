@@ -1,0 +1,44 @@
+{
+  "updatedAt": "2026-08-29T11:20:00+03:30",
+  "source": "Gmail connected feed",
+  "summary": {
+    "directBuyerReplies": 0,
+    "marketAlerts": 3,
+    "needsAction": 1
+  },
+  "items": [
+    {
+      "id": "gmail-1a045edf4e2f7faa",
+      "type": "market_alert",
+      "priority": "medium",
+      "status": "review",
+      "date": "2026-08-28",
+      "from": "Google Alerts",
+      "subject": "Zahedi dates importer",
+      "summary": "Fresh Google Alert surfaced a wholesale Zahidi/Zahedi supplier result on IndiaMART. This is market intelligence, not a verified direct buyer reply.",
+      "nextAction": "Review the underlying result and qualify whether there is a real buyer/importer opportunity."
+    },
+    {
+      "id": "gmail-1a03cb34569843b8",
+      "type": "market_alert",
+      "priority": "medium",
+      "status": "review",
+      "date": "2026-08-26",
+      "from": "Google Alerts",
+      "subject": "Zahedi dates importer",
+      "summary": "Mundus Agri alert referenced rising EU date imports. Useful market signal; not a customer inquiry.",
+      "nextAction": "Use as Market Radar input and verify current EU import trend before making a commercial decision."
+    },
+    {
+      "id": "gmail-1a01162e03c358a3",
+      "type": "supplier_alert",
+      "priority": "low",
+      "status": "review",
+      "date": "2026-08-17",
+      "from": "Google Alerts",
+      "subject": "Kabkab dates supplier",
+      "summary": "Alert surfaced Nakhlestan Salehi Co. as a wholesale Kabkab supplier contact.",
+      "nextAction": "Keep as a possible sourcing benchmark; verify origin, grade, capacity and current crop pricing before supplier qualification."
+    }
+  ]
+}
