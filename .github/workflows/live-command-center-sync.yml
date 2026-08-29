@@ -1,0 +1,126 @@
+name: Live Command Center Sync
+
+on:
+  repository_dispatch:
+    types: [gmail_inbox_event]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-command-center-sync.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update live Gmail feed
+        if: github.event_name == 'repository_dispatch'
+        env:
+          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path('data/inbox-live.json')
+          payload = json.loads(os.environ['PAYLOAD'])
+          data = {"updatedAt": payload.get("date"), "items": []}
+          if p.exists():
+              try:
+                  data = json.loads(p.read_text())
+              except Exception:
+                  pass
+          items = data.setdefault('items', [])
+          item = {
+              "id": payload.get("id"),
+              "threadId": payload.get("threadId"),
+              "date": payload.get("date"),
+              "subject": payload.get("subject"),
+              "fromName": payload.get("fromName"),
+              "fromEmail": payload.get("fromEmail"),
+              "snippet": payload.get("snippet"),
+              "status": "new"
+          }
+          items = [x for x in items if x.get('id') != item.get('id')]
+          items.insert(0, item)
+          data['items'] = items[:100]
+          data['updatedAt'] = item.get('date')
+          p.parent.mkdir(parents=True, exist_ok=True)
+          p.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Inject instant-refresh UI into Command Center
+        if: github.event_name == 'push'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('live/seventh-sky-command-center-live.html')
+          s = p.read_text()
+          marker = '<!-- LIVE-INBOX-SYNC-V1 -->'
+          if marker not in s:
+              js = r'''
+<!-- LIVE-INBOX-SYNC-V1 -->
+<script>
+(function(){
+  const FEED='../data/inbox-live.json';
+  let timer=null;
+  function esc(v){return String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));}
+  function ensureCard(){
+    let card=document.getElementById('liveInboxCard');
+    if(card) return card;
+    const home=document.getElementById('home');
+    if(!home) return null;
+    card=document.createElement('div');
+    card.id='liveInboxCard';
+    card.className='card';
+    card.style.marginTop='12px';
+    card.innerHTML='<div class="section-head"><h2>Live Inbox</h2><span class="countdot" id="liveInboxStatus">در حال همگام‌سازی…</span></div><div id="liveInboxItems" class="muted mini">در حال دریافت آخرین اطلاعات…</div>';
+    const hero=home.querySelector('.hero');
+    if(hero && hero.nextSibling) home.insertBefore(card, hero.nextSibling); else home.appendChild(card);
+    return card;
+  }
+  async function refreshLive(){
+    ensureCard();
+    const st=document.getElementById('liveInboxStatus');
+    const box=document.getElementById('liveInboxItems');
+    try{
+      const r=await fetch(FEED+'?t='+Date.now(),{cache:'no-store'});
+      if(!r.ok) throw new Error('feed '+r.status);
+      const d=await r.json();
+      const items=Array.isArray(d.items)?d.items:[];
+      if(st) st.textContent='آپدیت '+new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'});
+      if(box){
+        if(!items.length){box.innerHTML='فعلاً پیام جدیدی ثبت نشده.';}
+        else box.innerHTML=items.slice(0,5).map(x=>'<div class="buyer"><div><h3>'+esc(x.subject||'بدون عنوان')+'</h3><div class="meta"><span class="tag">'+esc(x.fromName||x.fromEmail||'Email')+'</span><span class="tag">'+esc(x.status||'new')+'</span></div><div class="next">'+esc(x.snippet||'')+'</div></div></div>').join('');
+      }
+    }catch(e){
+      if(st) st.textContent='Sync retry';
+      if(box) box.textContent='آخرین داده ذخیره‌شده در دسترس نیست؛ دوباره تلاش می‌شود.';
+    }
+  }
+  window.addEventListener('load',()=>{refreshLive();timer=setInterval(refreshLive,30000);});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden) refreshLive();});
+  window.addEventListener('focus',refreshLive);
+})();
+</script>
+'''
+              s = s.replace('</body>', js+'\n</body>')
+              p.write_text(s)
+          PY
+
+      - name: Commit changes
+        run: |
+          git config user.name "seventh-sky-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/inbox-live.json live/seventh-sky-command-center-live.html 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Update live Command Center feed"
+            git push
+          fi
