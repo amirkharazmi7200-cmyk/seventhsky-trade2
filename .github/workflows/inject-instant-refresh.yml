@@ -1,0 +1,76 @@
+name: Inject Instant Refresh
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/inject-instant-refresh.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  inject:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inject instant refresh client
+        env:
+          LIVE_ENDPOINT: https://hook.us2.make.com/c9s7ispjfmypxsqlo81yytccgaqgbw1w
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          p=Path('live/seventh-sky-command-center-live.html')
+          s=p.read_text()
+          marker='<!-- INSTANT-MAKE-REFRESH-V1 -->'
+          if marker not in s:
+              endpoint=os.environ['LIVE_ENDPOINT']
+              js=f'''
+{marker}
+<script>
+(function(){{
+ const ENDPOINT={endpoint!r};
+ function esc(v){{return String(v??'').replace(/[&<>\"']/g,m=>({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[m]));}}
+ function card(){{
+   let c=document.getElementById('instantInboxCard');
+   if(c) return c;
+   const home=document.getElementById('home'); if(!home) return null;
+   c=document.createElement('div'); c.id='instantInboxCard'; c.className='card'; c.style.marginTop='12px';
+   c.innerHTML='<div class="section-head"><h2>Inbox Live</h2><span id="instantInboxState" class="countdot">Live sync</span></div><div id="instantInboxBody" class="muted mini">در حال بررسی آخرین ایمیل…</div>';
+   const hero=home.querySelector('.hero'); if(hero) hero.insertAdjacentElement('afterend',c); else home.prepend(c); return c;
+ }}
+ async function refreshNow(){{
+   card(); const st=document.getElementById('instantInboxState'), box=document.getElementById('instantInboxBody');
+   if(st) st.textContent='در حال آپدیت…';
+   try{{
+     const r=await fetch(ENDPOINT+'?t='+Date.now(),{{cache:'no-store'}});
+     if(!r.ok) throw new Error('HTTP '+r.status);
+     const d=await r.json();
+     if(st) st.textContent='آپدیت '+new Date().toLocaleTimeString('fa-IR',{{hour:'2-digit',minute:'2-digit'}});
+     if(box) box.innerHTML=d && d.id ? '<div class="buyer"><div><h3>'+esc(d.subject||'بدون عنوان')+'</h3><div class="meta"><span class="tag">'+esc(d.fromName||d.fromEmail||'Email')+'</span><span class="tag scoreA">LIVE</span></div><div class="next">'+esc(d.snippet||'')+'</div></div></div>' : 'در ۷ روز اخیر ایمیل مرتبط جدیدی پیدا نشد.';
+     window.dispatchEvent(new CustomEvent('seventhsky:live-refresh',{{detail:d}}));
+   }}catch(e){{ if(st) st.textContent='اتصال مجدد…'; if(box) box.textContent='Sync موقتاً در دسترس نیست؛ با بازگشت به اپ دوباره بررسی می‌شود.'; }}
+ }}
+ window.seventhSkyRefresh=refreshNow;
+ window.addEventListener('load',refreshNow);
+ window.addEventListener('focus',refreshNow);
+ document.addEventListener('visibilitychange',()=>{{if(!document.hidden) refreshNow();}});
+ setInterval(()=>{{if(!document.hidden) refreshNow();}},60000);
+}})();
+</script>
+'''
+              s=s.replace('</body>',js+'\n</body>')
+              p.write_text(s)
+          PY
+      - name: Commit injected client
+        run: |
+          git config user.name "seventh-sky-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add live/seventh-sky-command-center-live.html
+          if git diff --cached --quiet; then
+            echo "Already injected"
+          else
+            git commit -m "Enable instant live refresh on app open"
+            git push
+          fi
