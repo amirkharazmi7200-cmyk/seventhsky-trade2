@@ -1,0 +1,100 @@
+name: Deploy IranServer Backend
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DB_HOST: ${{ secrets.IRANSERVER_DB_HOST }}
+      DB_NAME: ${{ secrets.IRANSERVER_DB_NAME }}
+      DB_USER: ${{ secrets.IRANSERVER_DB_USER }}
+      DB_PASS: ${{ secrets.IRANSERVER_DB_PASS }}
+      API_TOKEN: ${{ secrets.IRANSERVER_API_TOKEN }}
+      API_URL: ${{ secrets.IRANSERVER_API_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate required deployment secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for v in DB_HOST DB_NAME DB_USER DB_PASS API_TOKEN API_URL; do
+            [ -n "${!v:-}" ] || { echo "Missing required secret mapped to $v"; exit 1; }
+          done
+          [ -n "${{ secrets.IRANSERVER_FTP_SERVER }}" ] || { echo "Missing FTP server secret"; exit 1; }
+          [ -n "${{ secrets.IRANSERVER_FTP_USERNAME }}" ] || { echo "Missing FTP username secret"; exit 1; }
+          [ -n "${{ secrets.IRANSERVER_FTP_PASSWORD }}" ] || { echo "Missing FTP password secret"; exit 1; }
+          [ -n "${{ secrets.IRANSERVER_FTP_REMOTE_DIR }}" ] || { echo "Missing FTP remote directory secret"; exit 1; }
+
+      - name: Generate private backend config
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          def phpq(v):
+              return v.replace('\\','\\\\').replace("'","\\'")
+          text = "<?php\nreturn [\n"
+          text += "  'db_host' => '%s',\n" % phpq(os.environ['DB_HOST'])
+          text += "  'db_name' => '%s',\n" % phpq(os.environ['DB_NAME'])
+          text += "  'db_user' => '%s',\n" % phpq(os.environ['DB_USER'])
+          text += "  'db_pass' => '%s',\n" % phpq(os.environ['DB_PASS'])
+          text += "  'api_token' => '%s',\n" % phpq(os.environ['API_TOKEN'])
+          text += "  'allowed_origins' => ['https://radar.7skytrade.com'],\n];\n"
+          Path('backend-iranserver/config.php').write_text(text, encoding='utf-8')
+
+      - name: Deploy backend files by FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.IRANSERVER_FTP_SERVER }}
+          username: ${{ secrets.IRANSERVER_FTP_USERNAME }}
+          password: ${{ secrets.IRANSERVER_FTP_PASSWORD }}
+          local-dir: ./backend-iranserver/
+          server-dir: ${{ secrets.IRANSERVER_FTP_REMOTE_DIR }}
+          dangerous-clean-slate: false
+
+      - name: Install or upgrade database schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -X POST "${API_URL%/}/install.php" \
+            -H "Authorization: Bearer ${API_TOKEN}" \
+            -H "Accept: application/json"
+
+      - name: Verify backend health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            "${API_URL%/}/index.php?resource=health" \
+            -H "Accept: application/json" | tee /tmp/health.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/health.json'))
+          assert d.get('ok') is True and d.get('database') == 'connected', d
+          PY
+
+      - name: Bootstrap current leads into central database
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          leads=json.load(open('data/leads.json',encoding='utf-8'))
+          json.dump({'leads':leads},open('/tmp/bootstrap.json','w',encoding='utf-8'),ensure_ascii=False)
+          PY
+          curl --fail --silent --show-error \
+            -X POST "${API_URL%/}/index.php?resource=bootstrap" \
+            -H "Authorization: Bearer ${API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/bootstrap.json | tee /tmp/bootstrap-result.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/bootstrap-result.json'))
+          assert d.get('ok') is True and int(d.get('imported',0)) > 0, d
+          PY
