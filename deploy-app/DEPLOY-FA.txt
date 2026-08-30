@@ -1,0 +1,33 @@
+Seventh Sky Command Center — Deploy to app.7skytrade.com
+
+فایل‌های این پوشه:
+1) index.html
+2) backend-client-v2.js
+3) negotiation-room.html
+4) smoke-test.html
+
+مقصد همه فایل‌ها:
+/domains/app.7skytrade.com/public_html/
+
+روش Deploy:
+- از index.html فعلی روی هاست بکاپ بگیر یا نامش را index-before-crm.html کن.
+- چهار فایل بالا را با همین نام‌ها داخل public_html آپلود کن.
+- API Token باید از قبل در localStorage همین Origin با کلید 7skyApiToken باشد. Command Center فعلی قبلاً همین Token را ذخیره کرده است.
+- سپس https://app.7skytrade.com/smoke-test.html را باز کن و تست را اجرا کن.
+- فقط اگر ALL TESTS PASSED نمایش داده شد، https://app.7skytrade.com را باز کن.
+
+نتیجه مورد انتظار:
+- Backend: Connected
+- TEST Buyer از Buyer Inbox عملیاتی حذف شده باشد.
+- هر Buyer دکمه Open CRM داشته باشد.
+- Open CRM → negotiation-room.html?lead=... باز شود.
+- تغییر Status / Next Action / Follow-up / Notes با دکمه «ذخیره در MySQL» در crm_state ذخیره شود.
+- ذخیره پرونده یک Activity هم در جدول activities ثبت کند.
+- Timeline از MySQL خوانده شود.
+- Inbox eventهای match‌شده با lead_id در پرونده Buyer نمایش داده شوند.
+- آخرین Pricing snapshot در صورت وجود نمایش داده شود.
+
+امنیت بعد از تست:
+- smoke-test.html را حذف کن.
+- فایل‌های import آزمایشی و cors-test را حذف کن.
+- چون Token و DB password قبلاً در اسکرین‌شات/چت دیده شده‌اند، هر دو Secret را rotate کن و Token جدید را دوباره در App ذخیره کن.
