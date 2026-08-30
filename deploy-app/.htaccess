@@ -1,0 +1,7 @@
+Options -Indexes
+<Files "app-api-config.php">
+  Require all denied
+</Files>
+<Files "app-api-config.example.php">
+  Require all denied
+</Files>
