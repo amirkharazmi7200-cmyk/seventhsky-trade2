@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'manifest.webmanifest'
+      - 'sw.js'
       - 'live/**'
       - 'data/leads.json'
       - '.github/workflows/inject-instant-refresh.yml'
@@ -22,9 +24,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f index.html
+          test -s index.html
           grep -q 'command-center-v4-test.html' index.html
+          grep -q 'manifest.webmanifest' index.html
+          grep -q 'serviceWorker.register' index.html
           for f in \
+            manifest.webmanifest \
+            sw.js \
             live/command-center-v4-test.html \
             live/today-actions-v1.html \
             live/activity-hub-v1.html \
@@ -33,11 +39,20 @@ jobs:
             live/contact-repair-v1.html \
             live/inbox-live-v1.html \
             live/reply-matcher-v1.html \
+            live/v4-readiness-check.html \
             data/leads.json; do
             test -s "$f" || { echo "Missing or empty: $f"; exit 1; }
           done
-      - name: Validate leads JSON
-        run: python -m json.tool data/leads.json >/dev/null
+      - name: Validate JSON assets
+        run: |
+          python -m json.tool data/leads.json >/dev/null
+          python -m json.tool manifest.webmanifest >/dev/null
+      - name: Verify push-capable service worker infrastructure
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "addEventListener('push'" sw.js
+          grep -q "notificationclick" sw.js
       - name: Guard against obsolete production entry
         shell: bash
         run: |
@@ -48,5 +63,5 @@ jobs:
           fi
       - name: Report external gates
         run: |
-          echo "Static v4 smoke checks passed."
-          echo "External runtime gates still require real execution: GitHub Pages/custom domain, Gmail->Make webhook, iPhone/PWA, and cross-device backend."
+          echo "Static v4 + PWA smoke checks passed."
+          echo "External runtime gates still require real execution: GitHub Pages/custom domain, Gmail->Make webhook, push subscription/sender/device, and central cross-device backend."
