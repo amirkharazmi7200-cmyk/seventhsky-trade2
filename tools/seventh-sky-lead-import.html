@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Seventh Sky Lead Import</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b0d10;color:#f4f4f4;margin:0;padding:24px}
+.wrap{max-width:680px;margin:auto}.card{background:#14181d;border:1px solid #2b3138;border-radius:18px;padding:20px}
+h1{font-size:22px;margin-top:0}p{line-height:1.8;color:#c9ced5}input,button{width:100%;box-sizing:border-box;border-radius:12px;padding:14px;margin-top:10px;font-size:16px}
+input{background:#0d1116;color:#fff;border:1px solid #39414a}button{border:0;background:#e8e8e8;color:#111;font-weight:700;cursor:pointer}button:disabled{opacity:.5}
+.ok{color:#74d99f}.bad{color:#ff8b8b}pre{white-space:pre-wrap;word-break:break-word;background:#0d1116;padding:14px;border-radius:12px;min-height:90px}
+</style>
+</head>
+<body><div class="wrap"><div class="card">
+<h1>Import لیدهای Seventh Sky</h1>
+<p>این ابزار فایل اصلی <code>data/leads.json</code> را از GitHub می‌خواند، با API مرکزی Bootstrap می‌کند، سپس دوباره لیدها را از MySQL می‌خواند و تعداد واقعی ذخیره‌شده را نشان می‌دهد.</p>
+<input id="token" type="password" placeholder="API Token">
+<button id="go">شروع Import و تست</button>
+<pre id="out">آماده.</pre>
+</div></div>
+<script>
+const RAW='https://raw.githubusercontent.com/amirkharazmi7200-cmyk/seventhsky-trade2/main/data/leads.json';
+const API='https://command.7skytrade.com/index.php';
+const tokenEl=document.getElementById('token'),out=document.getElementById('out'),go=document.getElementById('go');
+tokenEl.value=localStorage.getItem('7skyApiToken')||localStorage.getItem('seventhSkyApiToken')||'';
+function show(s,cls=''){out.className=cls;out.textContent=s}
+go.onclick=async()=>{
+ const token=tokenEl.value.trim();
+ if(!token){show('API Token پیدا نشد. Token را وارد کن.','bad');return}
+ go.disabled=true;
+ try{
+  show('۱) دریافت لیدها از GitHub...');
+  const r=await fetch(RAW,{cache:'no-store'});
+  if(!r.ok) throw new Error('GitHub HTTP '+r.status);
+  const leads=await r.json();
+  if(!Array.isArray(leads)||!leads.length) throw new Error('فایل لید معتبر نیست');
+  show(`۲) ${leads.length} لید دریافت شد.\nدر حال ارسال به Backend...`);
+  const b=await fetch(API+'?resource=bootstrap',{method:'POST',headers:{Accept:'application/json','Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({leads})});
+  const bt=await b.text(); let bd={}; try{bd=JSON.parse(bt)}catch(e){}
+  if(!b.ok||bd.ok===false) throw new Error(bd.error||bt||('Backend HTTP '+b.status));
+  show('۳) Bootstrap موفق بود.\nدر حال خواندن مجدد از MySQL...');
+  const v=await fetch(API+'?resource=leads',{headers:{Accept:'application/json',Authorization:'Bearer '+token},cache:'no-store'});
+  const vt=await v.text(); let vd={}; try{vd=JSON.parse(vt)}catch(e){}
+  if(!v.ok||vd.ok===false) throw new Error(vd.error||vt||('Verify HTTP '+v.status));
+  const saved=Array.isArray(vd.leads)?vd.leads.length:0;
+  show(`موفق ✓\nفایل منبع: ${leads.length} لید\nلیدهای خوانده‌شده از MySQL بعد از Import: ${saved}\n\nحالا app.7skytrade.com را Refresh کن.`,'ok');
+ }catch(e){show('خطا ✗\n'+e.message,'bad')}
+ finally{go.disabled=false}
+};
+</script>
+</body>
+</html>
