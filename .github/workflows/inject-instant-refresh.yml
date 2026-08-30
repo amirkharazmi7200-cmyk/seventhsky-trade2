@@ -9,6 +9,8 @@ on:
       - 'sw.js'
       - 'live/**'
       - 'data/leads.json'
+      - 'backend-iranserver/**'
+      - '.github/workflows/deploy-iranserver-backend.yml'
       - '.github/workflows/inject-instant-refresh.yml'
   workflow_dispatch:
 
@@ -39,7 +41,15 @@ jobs:
             live/contact-repair-v1.html \
             live/inbox-live-v1.html \
             live/reply-matcher-v1.html \
+            live/backend-client-v1.js \
+            live/backend-setup-v1.html \
             live/v4-readiness-check.html \
+            backend-iranserver/index.php \
+            backend-iranserver/install.php \
+            backend-iranserver/schema.sql \
+            backend-iranserver/config.example.php \
+            backend-iranserver/.htaccess \
+            .github/workflows/deploy-iranserver-backend.yml \
             data/leads.json; do
             test -s "$f" || { echo "Missing or empty: $f"; exit 1; }
           done
@@ -47,6 +57,18 @@ jobs:
         run: |
           python -m json.tool data/leads.json >/dev/null
           python -m json.tool manifest.webmanifest >/dev/null
+      - name: Verify central backend package guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e backend-iranserver/config.php || { echo 'Private config.php must never be committed'; exit 1; }
+          grep -q "resource === 'health'" backend-iranserver/index.php
+          grep -q "resource === 'bootstrap'" backend-iranserver/index.php
+          grep -q 'CREATE TABLE IF NOT EXISTS leads' backend-iranserver/schema.sql
+          grep -q 'CREATE TABLE IF NOT EXISTS crm_state' backend-iranserver/schema.sql
+          grep -q 'backend-client-v1.js' live/command-center-v4-test.html
+          grep -q 'backend-setup-v1.html' live/command-center-v4-test.html
+          grep -q 'IRANSERVER_API_TOKEN' .github/workflows/deploy-iranserver-backend.yml
       - name: Verify push-capable service worker infrastructure
         shell: bash
         run: |
@@ -63,5 +85,5 @@ jobs:
           fi
       - name: Report external gates
         run: |
-          echo "Static v4 + PWA smoke checks passed."
-          echo "External runtime gates still require real execution: GitHub Pages/custom domain, Gmail->Make webhook, push subscription/sender/device, and central cross-device backend."
+          echo "Static v4 + PWA + IranServer backend package smoke checks passed."
+          echo "External runtime gates still require real execution: GitHub Pages/custom domain, IranServer deploy/database health, Gmail->Make->backend, push sender/subscription/device, and central CRM cross-device verification."
