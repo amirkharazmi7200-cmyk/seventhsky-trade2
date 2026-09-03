@@ -1,0 +1,30 @@
+name: Gmail Issue to Command Center
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  forward:
+    if: startsWith(github.event.issue.title, '[GMAIL_EVENT]')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Forward event to Command Center
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          printf '%s' "$BODY" > /tmp/payload.json
+          jq empty /tmp/payload.json
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/payload.json \
+            'https://app.7skytrade.com/api-proxy.php?resource=inbox'
+      - name: Close bridge issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: gh issue close "$ISSUE" --repo "$REPO" --comment 'Forwarded to Seventh Sky Command Center.'
