@@ -11,16 +11,30 @@ jobs:
     permissions:
       issues: write
     steps:
-      - name: Forward event to Command Center
+      - name: Build and forward payload
         env:
+          TITLE: ${{ github.event.issue.title }}
           BODY: ${{ github.event.issue.body }}
+          ISSUE_ID: ${{ github.event.issue.id }}
+          CREATED_AT: ${{ github.event.issue.created_at }}
         run: |
-          printf '%s' "$BODY" > /tmp/payload.json
-          jq empty /tmp/payload.json
+          rest="${TITLE#'[GMAIL_EVENT] '}"
+          from_email="${rest%% ||| *}"
+          subject="${rest#* ||| }"
+          payload=$(jq -n \
+            --arg source "gmail" \
+            --arg external_id "$ISSUE_ID" \
+            --arg thread_id "" \
+            --arg from_name "" \
+            --arg from_email "$from_email" \
+            --arg subject "$subject" \
+            --arg snippet "$BODY" \
+            --arg received_at "$CREATED_AT" \
+            '{source:$source,external_id:$external_id,thread_id:$thread_id,from_name:$from_name,from_email:$from_email,subject:$subject,snippet:$snippet,received_at:$received_at}')
           curl --fail-with-body --silent --show-error \
             -X POST \
             -H 'Content-Type: application/json' \
-            --data-binary @/tmp/payload.json \
+            --data "$payload" \
             'https://app.7skytrade.com/api-proxy.php?resource=inbox'
       - name: Close bridge issue
         env:
