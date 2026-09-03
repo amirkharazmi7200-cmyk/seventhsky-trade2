@@ -1,0 +1,35 @@
+name: Gmail to Command Center
+
+on:
+  repository_dispatch:
+    types: [gmail_inbox_event]
+
+jobs:
+  forward:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Forward Gmail event to Command Center
+        env:
+          EVENT_ID: ${{ github.event.client_payload.id }}
+          THREAD_ID: ${{ github.event.client_payload.threadId }}
+          FROM_NAME: ${{ github.event.client_payload.fromName }}
+          FROM_EMAIL: ${{ github.event.client_payload.fromEmail }}
+          SUBJECT: ${{ github.event.client_payload.subject }}
+          SNIPPET: ${{ github.event.client_payload.snippet }}
+          RECEIVED_AT: ${{ github.event.client_payload.date }}
+        run: |
+          payload=$(jq -n \
+            --arg source "gmail" \
+            --arg external_id "$EVENT_ID" \
+            --arg thread_id "$THREAD_ID" \
+            --arg from_name "$FROM_NAME" \
+            --arg from_email "$FROM_EMAIL" \
+            --arg subject "$SUBJECT" \
+            --arg snippet "$SNIPPET" \
+            --arg received_at "$RECEIVED_AT" \
+            '{source:$source,external_id:$external_id,thread_id:$thread_id,from_name:$from_name,from_email:$from_email,subject:$subject,snippet:$snippet,received_at:$received_at}')
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H 'Content-Type: application/json' \
+            --data "$payload" \
+            'https://app.7skytrade.com/api-proxy.php?resource=inbox'
