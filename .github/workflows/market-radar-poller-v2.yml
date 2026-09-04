@@ -16,15 +16,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Watch Indonesia dates buyer signals and ingest
+      - name: Watch Indonesia dates buyer signals, persist and verify
         shell: python
         run: |
           import hashlib, html, json, re, subprocess, tempfile, urllib.parse, urllib.request, xml.etree.ElementTree as ET
           from datetime import datetime, timezone
           from html.parser import HTMLParser
 
-          API='https://app.7skytrade.com/api-proxy.php?resource=bootstrap'
-          UA='Mozilla/5.0 (compatible; SeventhSkyMarketRadar/2.0; +https://7skytrade.com)'
+          INBOX_API='https://app.7skytrade.com/api-proxy.php?resource=inbox'
+          READBACK_API='https://app.7skytrade.com/api-proxy.php?resource=inbox&limit=100'
+          UA='Mozilla/5.0 (compatible; SeventhSkyMarketRadar/2.1; +https://7skytrade.com)'
           NOW=datetime.now(timezone.utc)
 
           class TextParser(HTMLParser):
@@ -37,24 +38,29 @@ jobs:
               req=urllib.request.Request(url,headers={'User-Agent':UA,'Accept-Language':'en-US,en;q=0.9'})
               with urllib.request.urlopen(req,timeout=25) as r: return r.read()
 
-          def post_lead(lead):
-              with tempfile.NamedTemporaryFile('w',encoding='utf-8',delete=False) as f:
-                  json.dump({'leads':[lead]},f,ensure_ascii=False); path=f.name
-              p=subprocess.run(['curl','--fail-with-body','--silent','--show-error','-X','POST',API,'-H','Content-Type: application/json','--data-binary','@'+path],capture_output=True,text=True,timeout=30)
-              if p.returncode!=0:
-                  raise RuntimeError(('HTTP_BODY='+p.stdout+' STDERR='+p.stderr)[:1200])
+          def curl_json(url,method='GET',body=None):
+              args=['curl','--fail-with-body','--silent','--show-error','-X',method,url,'-H','Accept: application/json']
+              path=None
+              if body is not None:
+                  with tempfile.NamedTemporaryFile('w',encoding='utf-8',delete=False) as f:
+                      json.dump(body,f,ensure_ascii=False); path=f.name
+                  args += ['-H','Content-Type: application/json','--data-binary','@'+path]
+              p=subprocess.run(args,capture_output=True,text=True,timeout=30)
+              if p.returncode!=0: raise RuntimeError(('HTTP_BODY='+p.stdout+' STDERR='+p.stderr)[:1500])
               data=json.loads(p.stdout)
-              if not data.get('ok'): raise RuntimeError(('HTTP_BODY='+p.stdout)[:1200])
+              if data.get('ok') is False: raise RuntimeError(('HTTP_BODY='+p.stdout)[:1500])
               return data
 
           def mklead(title,url,source,notes,published='',contact='',score='A',extra=None):
               key=hashlib.sha256((source+'|'+url+'|'+title).encode()).hexdigest()[:20]
               x={
-                'id':'radar-'+key,'company':title[:220],'country':'Indonesia','product':'Dates / Kurma',
-                'source':source,'sourceUrl':url,'status':'Radar New','score':score,
-                'next':'منبع را فوراً بررسی کن؛ اگر Buyer معتبر بود، پیام اولیه آماده است و از داخل کامند سنتر اقدام کن.',
+                'id':'radar-'+key,'messageKey':'market-radar-'+key,'company':title[:220],
+                'country':'Indonesia','product':'Dates / Kurma','source':'market_radar',
+                'marketSource':source,'sourceUrl':url,'status':'Radar New','score':score,
+                'next':'منبع را فوراً بررسی کن؛ اگر Buyer معتبر بود از داخل کامند سنتر پیام یا Inquire را بزن.',
                 'notes':notes[:1600],'publishedAt':published or NOW.isoformat(),'contact':contact,
-                'radar':True,'requiresApproval':True,'intent':'buyer_signal','firstSeenAt':NOW.isoformat()
+                'radar':True,'requiresApproval':False,'intent':'buyer_signal','firstSeenAt':NOW.isoformat(),
+                'outreachMode':'one_click_or_platform'
               }
               if extra: x.update(extra)
               return x
@@ -104,14 +110,25 @@ jobs:
                       if not title or not link or bad.search(text): continue
                       if 'indonesia' not in text.lower(): continue
                       if not prod.search(text) or not intent.search(text): continue
-                      found.append(mklead(title,link,'B2B Web Radar',desc,pub,'','A' if re.search(r'\b(rfq|buy lead|looking for supplier|request for quotation)\b',text,re.I) else 'B',{'query':q,'sourceType':'web_discovery'}))
+                      score='A' if re.search(r'\b(rfq|buy lead|looking for supplier|request for quotation)\b',text,re.I) else 'B'
+                      found.append(mklead(title,link,'B2B Web Radar',desc,pub,'',score,{'query':q,'sourceType':'web_discovery'}))
               except Exception as e: errors.append('search:'+q+':'+str(e))
 
-          uniq={x['id']:x for x in found}
-          ingested=0; post_errors=[]
+          uniq={x['messageKey']:x for x in found}
+          ingested=[]; post_errors=[]
           for x in uniq.values():
-              try: post_lead(x); ingested+=1
+              try:
+                  curl_json(INBOX_API,'POST',x)
+                  ingested.append(x['messageKey'])
               except Exception as e: post_errors.append(x['company'][:60]+': '+str(e))
 
-          print(json.dumps({'ok':ingested>0 or not uniq,'found':len(found),'unique':len(uniq),'ingested':ingested,'source_errors':errors[:8],'post_errors':post_errors[:8]},ensure_ascii=False))
-          if uniq and ingested==0: raise SystemExit(1)
+          verified=[]
+          if ingested:
+              rb=curl_json(READBACK_API)
+              present={e.get('messageKey') for e in rb.get('events',[]) if isinstance(e,dict)}
+              verified=[k for k in ingested if k in present]
+              if len(verified)!=len(ingested):
+                  post_errors.append('readback_missing:'+','.join(sorted(set(ingested)-set(verified))))
+
+          print(json.dumps({'ok':bool(verified) or not uniq,'found':len(found),'unique':len(uniq),'ingested':len(ingested),'verified':len(verified),'source_errors':errors[:8],'errors':post_errors[:8]},ensure_ascii=False))
+          if uniq and not verified: raise SystemExit(1)
