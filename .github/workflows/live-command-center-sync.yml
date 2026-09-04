@@ -1,83 +1,14 @@
 name: Live Command Center Gmail Feed
 
 on:
-  repository_dispatch:
-    types: [gmail_inbox_event]
   workflow_dispatch:
 
 permissions:
-  contents: write
-
-concurrency:
-  group: command-center-gmail-feed
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  sync:
+  manual-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Update Gmail event feed
-        if: github.event_name == 'repository_dispatch'
-        env:
-          PAYLOAD: ${{ toJson(github.event.client_payload) }}
-        run: |
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          payload = json.loads(os.environ.get('PAYLOAD') or '{}')
-          message_id = payload.get('id') or payload.get('messageId')
-          if not message_id:
-              raise SystemExit('gmail_inbox_event requires id/messageId')
-          p = Path('data/inbox-live.json')
-          data = {"updatedAt": None, "items": []}
-          if p.exists():
-              try:
-                  old = json.loads(p.read_text())
-                  if isinstance(old, dict): data = old
-              except Exception:
-                  pass
-          items = data.get('items') if isinstance(data.get('items'), list) else []
-          item = {
-              "id": message_id,
-              "threadId": payload.get("threadId"),
-              "date": payload.get("date"),
-              "subject": payload.get("subject"),
-              "fromName": payload.get("fromName"),
-              "fromEmail": payload.get("fromEmail"),
-              "snippet": payload.get("snippet"),
-              "status": "new"
-          }
-          items = [x for x in items if isinstance(x, dict) and x.get('id') != message_id]
-          items.insert(0, item)
-          data = {"updatedAt": item.get('date'), "items": items[:100]}
-          p.parent.mkdir(parents=True, exist_ok=True)
-          p.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
-          PY
-
-      - name: Validate feed
-        if: github.event_name == 'repository_dispatch'
-        run: python -m json.tool data/inbox-live.json >/dev/null
-
-      - name: Commit feed only
-        if: github.event_name == 'repository_dispatch'
-        run: |
-          git config user.name "seventh-sky-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/inbox-live.json
-          if git diff --cached --quiet; then
-            echo "No feed change"
-          else
-            git commit -m "Update Gmail inbox event feed"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
-
       - name: Manual check
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          echo "Workflow is v4-safe. It does not inject or modify the legacy Command Center UI."
-          test -f live/command-center-v4-test.html
+        run: echo "Legacy Gmail feed consumer disabled; Command Center inbox is handled by gmail-to-command-center.yml"
