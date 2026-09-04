@@ -29,8 +29,17 @@ jobs:
             --arg snippet "$SNIPPET" \
             --arg receivedAt "$RECEIVED_AT" \
             '{messageKey:$messageKey,source:$source,id:$id,threadId:$threadId,fromName:$fromName,fromEmail:$fromEmail,subject:$subject,snippet:$snippet,receivedAt:$receivedAt}')
+
           curl --fail-with-body --silent --show-error \
             -X POST \
             -H 'Content-Type: application/json' \
             --data "$payload" \
             'https://app.7skytrade.com/api-proxy.php?resource=inbox'
+
+          readback=$(curl --fail-with-body --silent --show-error \
+            'https://app.7skytrade.com/api-proxy.php?resource=inbox&limit=100')
+
+          echo "$readback" | jq -e --arg id "$EVENT_ID" \
+            '.ok == true and any(.events[]?; .messageKey == $id)' >/dev/null
+
+          echo "DB_READBACK_OK:$EVENT_ID"
