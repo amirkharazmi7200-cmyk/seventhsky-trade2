@@ -1,9 +1,11 @@
-name: Seventh Sky Market Radar Poller v2
+name: Seventh Sky Market Radar Poller v3
 
 on:
   push:
+    branches: [main]
     paths:
       - '.github/workflows/market-radar-poller-v2.yml'
+      - 'tools/market_radar.py'
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
@@ -11,95 +13,32 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: seventh-sky-market-radar
+  cancel-in-progress: false
+
 jobs:
   radar:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
-      - name: Watch Indonesia dates buyer signals, persist and verify
-        shell: python
+      - uses: actions/checkout@v4
+
+      - name: Discover, deduplicate, store and verify buyer signals
+        env:
+          RADAR_API_BASE: https://app.7skytrade.com/api-proxy.php
+          RADAR_MAX_AGE_DAYS: '180'
+          RADAR_MAX_RESULTS: '40'
+        run: python tools/market_radar.py
+
+      - name: Confirm approval-only outreach policy
+        shell: bash
         run: |
-          import base64, hashlib, html, json, re, subprocess, tempfile, urllib.parse, urllib.request, xml.etree.ElementTree as ET
-          from datetime import datetime, timezone
-          from html.parser import HTMLParser
-
-          INBOX_API='https://app.7skytrade.com/api-proxy.php?resource=inbox'
-          READBACK_API='https://app.7skytrade.com/api-proxy.php?resource=inbox&limit=100'
-          UA='Mozilla/5.0 (compatible; SeventhSkyMarketRadar/2.2)'
-          NOW=datetime.now(timezone.utc)
-
-          class TextParser(HTMLParser):
-              def __init__(self): super().__init__(); self.parts=[]
-              def handle_data(self,d):
-                  d=' '.join(html.unescape(d).split())
-                  if d: self.parts.append(d)
-
-          def get(url):
-              req=urllib.request.Request(url,headers={'User-Agent':UA,'Accept-Language':'en-US,en;q=0.9'})
-              with urllib.request.urlopen(req,timeout=18) as r: return r.read()
-
-          def curl_json(url,method='GET',body=None):
-              args=['curl','--connect-timeout','8','--max-time','18','--retry','1','--retry-delay','1','--fail-with-body','--silent','--show-error','-X',method,url,'-H','Accept: application/json']
-              if body is not None:
-                  with tempfile.NamedTemporaryFile('w',encoding='utf-8',delete=False) as f:
-                      json.dump(body,f,ensure_ascii=True,separators=(',',':')); path=f.name
-                  args += ['-H','Content-Type: application/json','--data-binary','@'+path]
-              p=subprocess.run(args,capture_output=True,text=True,timeout=45)
-              if p.returncode!=0: raise RuntimeError(('HTTP_BODY='+p.stdout+' STDERR='+p.stderr)[:1200])
-              data=json.loads(p.stdout)
-              if data.get('ok') is False: raise RuntimeError(('HTTP_BODY='+p.stdout)[:1200])
-              return data
-
-          def b64(s): return base64.urlsafe_b64encode(str(s or '').encode()).decode()
-
-          def mklead(title,url,source,notes,published='',contact='',score='A',extra=None):
-              key=hashlib.sha256((source+'|'+url+'|'+title).encode()).hexdigest()[:20]
-              x={'id':'radar-'+key,'messageKey':'market-radar-'+key,'company':title[:220],'country':'Indonesia','product':'Dates / Kurma','source':'market_radar','marketSource':source,'sourceUrl':url,'status':'Radar New','score':score,'notes':notes[:1300],'publishedAt':published or NOW.isoformat(),'contact':contact,'radar':True,'intent':'buyer_signal','firstSeenAt':NOW.isoformat(),'outreachMode':'one_click_or_platform'}
-              if extra: x.update(extra)
-              return x
-
-          def storage_event(x):
-              return {'messageKey':x['messageKey'],'source':'market_radar','radar':True,'id':x['id'],'company':x['company'],'country':'Indonesia','product':'Dates / Kurma','score':x['score'],'marketSource':x['marketSource'],'publishedAt':x['publishedAt'],'firstSeenAt':x['firstSeenAt'],'contact':x.get('contact',''),'sourceLinkB64':b64(x.get('sourceUrl','')),'notesB64':b64(x.get('notes','')),'sourceType':x.get('sourceType','web_discovery'),'outreachMode':'one_click_or_platform'}
-
-          found=[]; source_errors=[]
-          go4='https://www.go4worldbusiness.com/buyers/indonesia/dates.html'
-          try:
-              raw=get(go4).decode('utf-8','replace'); p=TextParser(); p.feed(raw); lines=p.parts
-              date_re=re.compile(r'^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{2}-\d{2}$'); idx=[i for i,s in enumerate(lines) if date_re.match(s)]
-              for pos,i in enumerate(idx):
-                  block=lines[i:min(idx[pos+1] if pos+1<len(idx) else i+80,i+80)]; pub=block[0]
-                  if not pub.endswith('-26'): continue
-                  text=' | '.join(block)
-                  if not re.search(r'\b(dates?|medjool|mazafati|kurma|ajwa|sukari|kimia)\b',text,re.I): continue
-                  title=next((s for s in block[1:18] if re.search(r'^(Wanted\s*:|[A-Z][A-Za-z0-9 .,&()\-]{2,})',s) and s not in {'Inquire Now','Add to Favorites','Product Description'}),'Dates buyer signal')
-                  buyer_from=next((s for s in block if s.startswith('Buyer From')),'Buyer From Indonesia'); contact=next((s.split(':',1)[1].strip() for s in block if s.startswith('Contact :') and ':' in s),''); qty=next((s for s in block if 'Quantity Required' in s or s.startswith('Quantity:')),''); terms=next((s for s in block if 'Payment Terms' in s),''); ship=next((s for s in block if 'Shipping Terms' in s),'')
-                  summary=' | '.join([z for z in [buyer_from,qty,ship,terms,text[:800]] if z])
-                  found.append(mklead(title,go4,'Go4WorldBusiness Buy Leads',summary,pub,contact,'A',{'sourceType':'direct_buy_lead'}))
-          except Exception as e: source_errors.append('go4:'+str(e))
-
-          queries=['site:tradekey.com dates buyer Indonesia RFQ','site:exporthub.com dates buyer Indonesia importer','site:go4worldbusiness.com/buyers/indonesia dates buyer','"kurma" "importir" Indonesia supplier','"dates" "buyer from Indonesia" supplier','"looking for supplier" dates Indonesia','"request for quotation" dates Indonesia']
-          intent=re.compile(r'\b(buyer|importer|rfq|request for quotation|looking for supplier|buy lead|procurement|distributor|wholesaler|importir|pembeli|mencari)\b',re.I); prod=re.compile(r'\b(dates?|date fruit|kurma|kabkab|mazafati|zahedi|medjool|ajwa|sukari)\b',re.I); bad=re.compile(r'\b(recipe|dating|calendar|festival|tourism|jobs?)\b',re.I)
-          for q in queries:
-              try:
-                  url='https://www.bing.com/search?'+urllib.parse.urlencode({'q':q,'format':'rss'}); root=ET.fromstring(get(url))
-                  for item in root.findall('.//item')[:12]:
-                      title=' '.join((item.findtext('title') or '').split()); link=' '.join((item.findtext('link') or '').split()); desc=' '.join((item.findtext('description') or '').split()); pub=' '.join((item.findtext('pubDate') or '').split()); text=title+' '+desc+' '+link
-                      if not title or not link or bad.search(text) or 'indonesia' not in text.lower() or not prod.search(text) or not intent.search(text): continue
-                      score='A' if re.search(r'\b(rfq|buy lead|looking for supplier|request for quotation)\b',text,re.I) else 'B'; found.append(mklead(title,link,'B2B Web Radar',desc,pub,'',score,{'sourceType':'web_discovery'}))
-              except Exception as e: source_errors.append('search:'+q+':'+str(e))
-
-          uniq={x['messageKey']:x for x in found}; ingested=[]; errors=[]
-          for x in uniq.values():
-              try: curl_json(INBOX_API,'POST',storage_event(x)); ingested.append(x['messageKey'])
-              except Exception as e: errors.append(x['company'][:60]+': '+str(e))
-
-          verified=[]
-          if ingested:
-              try:
-                  rb=curl_json(READBACK_API); present={e.get('messageKey') for e in rb.get('events',[]) if isinstance(e,dict)}; verified=[k for k in ingested if k in present]
-                  missing=sorted(set(ingested)-set(verified))
-                  if missing: errors.append('readback_missing:'+','.join(missing))
-              except Exception as e: errors.append('readback:'+str(e))
-
-          print(json.dumps({'ok':bool(verified) or not uniq,'found':len(found),'unique':len(uniq),'ingested':len(ingested),'verified':len(verified),'source_errors':source_errors[:6],'errors':errors[:6]},ensure_ascii=False))
-          if uniq and not verified: raise SystemExit(1)
+          set -euo pipefail
+          grep -q '"requiresApproval": True' tools/market_radar.py
+          grep -q '"autoSend": False' tools/market_radar.py
+          if grep -Eqi 'sendgrid|smtp|twilio|whatsapp.*api|mailgun' tools/market_radar.py; then
+            echo 'Outbound messaging integration is not allowed in the radar poller.'
+            exit 1
+          fi
+          echo 'Radar is discovery-only; outreach remains approval-gated and manually sent.'

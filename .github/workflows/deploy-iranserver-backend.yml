@@ -1,6 +1,11 @@
 name: Deploy IranServer Backend
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend-iranserver/**'
+      - '.github/workflows/deploy-iranserver-backend.yml'
   workflow_dispatch:
 
 permissions:

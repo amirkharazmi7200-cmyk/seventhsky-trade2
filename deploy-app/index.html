@@ -1,1 +1,703 @@
-<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#07101c"><title>Seventh Sky Command Center</title><style>:root{--bg:#07101c;--card:#0d1b2b;--card2:#101f31;--line:#203247;--txt:#eef6ff;--mut:#91a6bb;--good:#8cf0bc;--bad:#ff9aa7}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:Tahoma,Arial}.wrap{max-width:1100px;margin:auto;padding:14px 12px 80px}.top,.head{display:flex;justify-content:space-between;align-items:center;gap:8px}.top h1{font-size:18px;margin:0}.mut{color:var(--mut)}.mini{font-size:11px}.pill,.tag{border:1px solid var(--line);border-radius:999px;padding:5px 8px;font-size:10px}.good{color:var(--good);border-color:#285c45}.bad{color:var(--bad);border-color:#66343b}.card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:16px;padding:13px;margin-top:11px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.kpi{background:#08131f;border:1px solid var(--line);border-radius:12px;padding:10px}.kpi span{font-size:9px;color:var(--mut)}.kpi b{display:block;font-size:22px;margin-top:5px}.search{width:100%;background:#08131f;border:1px solid var(--line);color:white;border-radius:10px;padding:10px;font:inherit}.filters,.actions,.meta{display:flex;gap:6px;flex-wrap:wrap}.btn{border:1px solid var(--line);background:#102033;color:white;border-radius:9px;padding:7px 9px;text-decoration:none;font-size:10px;cursor:pointer}.primary,.filter.active{background:#174b3a;border-color:#2a765b}.buyer{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 0;border-top:1px solid var(--line)}.buyer:first-child{border-top:0}.buyer h3{font-size:13px;margin:0 0 6px}.next{margin-top:7px;color:var(--mut);font-size:10px;line-height:1.6}.error{color:var(--bad)}@media(max-width:760px){.buyer{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}.actions{justify-content:flex-start}}</style></head><body><main class="wrap"><div class="top"><div><h1>Seventh Sky Command Center</h1><div class="mut mini">Buyer Operations • Central MySQL</div></div><span id="backend" class="pill">Backend: checking…</span></div><section class="card"><div class="head"><b>Lead KPIs</b><span class="mut mini">TEST excluded</span></div><div class="kpis" style="margin-top:10px"><div class="kpi"><span>TOTAL REAL</span><b id="total">—</b></div><div class="kpi"><span>A SCORE</span><b id="aScore">—</b></div><div class="kpi"><span>CONTACTED</span><b id="contacted">—</b></div><div class="kpi"><span>NEGOTIATING</span><b id="negotiating">—</b></div></div></section><section class="card"><div class="head"><b>Buyer Inbox</b><span id="count" class="mut mini"></span></div><input id="search" class="search" style="margin-top:9px" placeholder="جستجو شرکت، کشور، محصول، منبع…"><div class="filters" style="margin-top:8px"><button class="btn filter active" data-filter="all">همه</button><button class="btn filter" data-filter="A">Score A</button><button class="btn filter" data-filter="action">Need Action</button><button class="btn filter" data-filter="contacted">Contacted</button><button class="btn filter" data-filter="negotiating">Negotiating</button></div><div id="buyers"><div class="mut mini" style="padding:20px;text-align:center">در حال دریافت لیدها…</div></div></section></main><script src="backend-client-v2.js"></script><script>const $=id=>document.getElementById(id);let leads=[],states={},mode='all';const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));function isTest(x){return /^test[-_]/i.test(String(x.id||''))||/^test\b/i.test(String(x.company||''))||/system test/i.test([x.source,x.notes,x.product].join(' '))}function contacts(x){const c=String(x.contact||''),email=(c.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)||[])[0]||'',raw=(c.match(/\+?\d[\d\s().-]{7,}\d/)||[])[0]||'',digits=raw.replace(/\D/g,'');return{email,phone:digits.length>=10&&digits.length<=15?digits:''}}function current(x){const s=states[x.id]||{};return{...x,status:s.status||x.status||'New',next:s.next??x.next??'',follow:s.follow??x.follow??'',notes:s.notes??x.notes??''}}function statusNorm(s){const x=String(s||'').toLowerCase();if(x==='action')return'need action';return x}function realLeads(){return leads.filter(x=>!isTest(x))}function filtered(){const term=$('search').value.toLowerCase();return realLeads().map(current).filter(x=>{const txt=[x.company,x.country,x.product,x.source,x.contact,x.status,x.next].join(' ').toLowerCase();if(term&&!txt.includes(term))return false;const st=statusNorm(x.status);if(mode==='A'&&x.score!=='A')return false;if(mode==='action'&&!/action|reply|quote|need action/.test(st))return false;if(mode==='contacted'&&!st.includes('contact'))return false;if(mode==='negotiating'&&!st.includes('negoti'))return false;return true})}function render(){const arr=filtered();$('count').textContent=arr.length+' lead';$('buyers').innerHTML=arr.map(x=>{const c=contacts(x),st=x.status||'New';return `<div class="buyer"><div><h3>${esc(x.company||'Unknown Buyer')}</h3><div class="meta"><span class="tag">Score ${esc(x.score||'—')}</span><span class="tag">${esc(x.country||'—')}</span><span class="tag">${esc(x.product||'—')}</span><span class="tag">${esc(st)}</span></div><div class="next">Next: ${esc(x.next||'—')}${x.follow?' • Follow: '+esc(x.follow):''}</div></div><div class="actions">${c.email?`<a class="btn" href="mailto:${esc(c.email)}">Email</a>`:''}${c.phone?`<a class="btn" target="_blank" rel="noopener" href="https://wa.me/${c.phone}">WhatsApp</a>`:''}<a class="btn primary" href="negotiation-room.html?lead=${encodeURIComponent(x.id)}">Open CRM</a></div></div>`}).join('')||'<div class="mut mini" style="padding:20px;text-align:center">نتیجه‌ای نیست.</div>'}function kpis(){const real=realLeads().map(current);$('total').textContent=real.length;$('aScore').textContent=real.filter(x=>x.score==='A').length;$('contacted').textContent=real.filter(x=>statusNorm(x.status).includes('contact')).length;$('negotiating').textContent=real.filter(x=>statusNorm(x.status).includes('negoti')).length}async function load(){try{await SevenSkyAPI.health();$('backend').textContent='Backend: Connected';$('backend').classList.add('good')}catch(e){$('backend').textContent='Backend: Unreachable';$('backend').classList.add('bad');throw e}if(!SevenSkyAPI.configured())throw Error('API Token در این مرورگر پیدا نشد');leads=await SevenSkyAPI.getLeads();const pairs=await Promise.all(leads.map(async l=>{try{return[l.id,await SevenSkyAPI.getState(l.id)]}catch(e){return[l.id,null]}}));states=Object.fromEntries(pairs.filter(x=>x[1]));kpis();render()}$('search').addEventListener('input',render);document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');mode=b.dataset.filter;render()});window.addEventListener('focus',()=>load().catch(()=>{}));load().catch(e=>{$('buyers').innerHTML='<div class="error mini" style="padding:20px">خطا: '+esc(e.message)+'</div>'});</script></body></html>
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#06101a" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>Seventh Sky Command Center</title>
+    <link rel="stylesheet" href="app.css?v=20260904-radar" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="top">
+        <div class="brand">
+          <small>SEVENTH SKY</small>
+          <h1>مرکز فرمان فروش</h1>
+        </div>
+        <div id="live" class="live" role="status">در حال اتصال…</div>
+      </header>
+
+      <nav class="view-tabs" aria-label="بخش‌های مرکز فرمان">
+        <button class="tab active" data-view="radar" type="button">رادار خرید و RFQ</button>
+        <button class="tab" data-view="buyers" type="button">پرونده مشتریان</button>
+        <button class="tab" data-view="actions" type="button">اقدامات امروز</button>
+      </nav>
+
+      <section class="panel" aria-labelledby="overview-title">
+        <div class="section-head">
+          <div>
+            <h2 id="overview-title">وضعیت عملیاتی</h2>
+            <div id="last-sync" class="eyebrow">در حال دریافت داده زنده…</div>
+          </div>
+          <span class="pill tag good">● LIVE DATA</span>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><b id="radar-total">—</b><span>سیگنال رادار</span></div>
+          <div class="kpi"><b id="radar-new">—</b><span>منتظر بررسی</span></div>
+          <div class="kpi"><b id="radar-a">—</b><span>اولویت A</span></div>
+          <div class="kpi"><b id="buyer-total">—</b><span>پرونده مشتری</span></div>
+        </div>
+        <div class="approval-note">
+          <strong>قفل ارسال فعال است.</strong>
+          سیستم فقط پیام پیشنهادی می‌سازد؛ واتس‌اپ، ایمیل یا صفحه Inquire فقط بعد از تأیید صریح تو باز می‌شود و ارسال نهایی نیز دستی است.
+        </div>
+      </section>
+
+      <section id="radar-view" class="panel" aria-labelledby="radar-title">
+        <div class="section-head">
+          <div>
+            <h2 id="radar-title">فرصت‌های خرید کشف‌شده</h2>
+            <div class="eyebrow">Buy Lead و RFQ؛ جدیدترین کشف‌ها در بالا</div>
+          </div>
+          <span id="radar-count" class="tag">۰ مورد</span>
+        </div>
+        <div class="toolbar">
+          <input id="radar-search" class="input" type="search" placeholder="جستجو در خریدار، محصول، منبع یا متن RFQ" />
+          <select id="radar-filter" class="select" aria-label="فیلتر فرصت‌های رادار">
+            <option value="new">منتظر بررسی</option>
+            <option value="all">همه سیگنال‌ها</option>
+            <option value="A">فقط اولویت A</option>
+            <option value="direct">تماس مستقیم</option>
+            <option value="platform">نیازمند Inquire</option>
+            <option value="approved">تأییدشده‌ها</option>
+            <option value="dismissed">کنارگذاشته‌شده‌ها</option>
+          </select>
+        </div>
+        <div id="radar-list" class="list"><div class="empty">در حال دریافت رادار…</div></div>
+      </section>
+
+      <section id="buyers-view" class="panel hidden" aria-labelledby="buyers-title">
+        <div class="section-head">
+          <div>
+            <h2 id="buyers-title">پرونده مشتریان</h2>
+            <div class="eyebrow">CRM مرکزی و وضعیت آخر هر Buyer</div>
+          </div>
+          <span id="buyer-count" class="tag">۰ مورد</span>
+        </div>
+        <div class="toolbar">
+          <input id="buyer-search" class="input" type="search" placeholder="جستجوی شرکت، کشور یا محصول" />
+          <select id="buyer-filter" class="select" aria-label="فیلتر پرونده مشتریان">
+            <option value="">همه وضعیت‌ها</option>
+            <option value="Need Action">نیاز به اقدام</option>
+            <option value="Contacted">تماس گرفته شد</option>
+            <option value="Waiting for Reply">منتظر پاسخ</option>
+            <option value="Negotiating">در حال مذاکره</option>
+            <option value="Quote Sent">قیمت ارسال شد</option>
+            <option value="Won">موفق</option>
+            <option value="Lost">ناموفق</option>
+          </select>
+        </div>
+        <div id="buyer-list" class="list"><div class="empty">در حال دریافت مشتریان…</div></div>
+      </section>
+
+      <section id="actions-view" class="panel hidden" aria-labelledby="actions-title">
+        <div class="section-head">
+          <div>
+            <h2 id="actions-title">اقدامات امروز</h2>
+            <div class="eyebrow">اول RFQ تازه، بعد پیگیری پرونده‌های فعال</div>
+          </div>
+        </div>
+        <div id="today" class="list"><div class="empty">در حال محاسبه اولویت‌ها…</div></div>
+      </section>
+    </main>
+
+    <nav class="bottom" aria-label="دسترسی سریع">
+      <div class="bottom-in">
+        <a class="nav active" href="#radar" data-view="radar">رادار خرید</a>
+        <a class="nav" href="#buyers" data-view="buyers">مشتریان</a>
+        <a class="nav" href="automation-status.html">اتوماسیون</a>
+      </div>
+    </nav>
+
+    <dialog id="approval-dialog" aria-labelledby="approval-title">
+      <div class="dialog-body">
+        <div class="dialog-head">
+          <div>
+            <h2 id="approval-title">بررسی و تأیید پیام</h2>
+            <div id="approval-recipient" class="eyebrow">—</div>
+          </div>
+          <button id="dialog-close" class="icon-button" type="button" aria-label="بستن">×</button>
+        </div>
+        <div class="field">
+          <label for="approval-channel">مسیر تماس</label>
+          <select id="approval-channel" class="select"></select>
+        </div>
+        <div class="field">
+          <label for="approval-message">متن پیشنهادی — قابل ویرایش</label>
+          <textarea id="approval-message" class="textarea" spellcheck="true"></textarea>
+        </div>
+        <label class="confirm-check" for="approval-check">
+          <input id="approval-check" type="checkbox" />
+          <span>متن و مقصد را بررسی کردم و اجازه می‌دهم فقط صفحه تماس باز شود. می‌دانم ارسال نهایی پیام همچنان دستی است.</span>
+        </label>
+        <div class="action-row">
+          <button id="approve-open" class="primary" type="button" disabled>ثبت تأیید و بازکردن مسیر تماس</button>
+          <button id="dialog-cancel" class="secondary" type="button">انصراف</button>
+        </div>
+        <div id="approval-error" class="error-box hidden" role="alert"></div>
+      </div>
+    </dialog>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+
+    <script src="backend-client.js?v=20260904-radar"></script>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const state = {
+        leads: [],
+        leadStates: new Map(),
+        radar: [],
+        radarStates: new Map(),
+        selectedRadarId: null,
+        view: "radar",
+      };
+
+      function esc(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[char]);
+      }
+
+      function decodeBase64Url(value) {
+        if (!value) return "";
+        try {
+          let normalized = String(value).replace(/-/g, "+").replace(/_/g, "/");
+          while (normalized.length % 4) normalized += "=";
+          const bytes = Uint8Array.from(atob(normalized), (char) => char.charCodeAt(0));
+          return new TextDecoder().decode(bytes);
+        } catch (_) {
+          return "";
+        }
+      }
+
+      function safeHttpUrl(value) {
+        try {
+          const url = new URL(value);
+          return /^(https?):$/.test(url.protocol) ? url.href : "";
+        } catch (_) {
+          return "";
+        }
+      }
+
+      function contactInfo(value) {
+        const text = String(value || "");
+        const email = (text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i) || [""])[0];
+        const rawPhone = (text.match(/\+?\d[\d\s().-]{7,}\d/) || [""])[0];
+        const digits = rawPhone.replace(/\D/g, "");
+        const phone = digits.length >= 10 && digits.length <= 15 ? digits : "";
+        const name = !email && !phone ? text.replace(/^(Contact\s*:\s*)/i, "").trim() : "";
+        return { email, phone, name, direct: Boolean(email || phone) };
+      }
+
+      function sourceAccess(row) {
+        const hint = `${row.marketSource || ""} ${row.sourceUrl || ""}`.toLowerCase();
+        const loginRequired = row.accessMode === "login_required"
+          || /go4worldbusiness|tradewheel|tradekey|exporthub/.test(hint);
+        return loginRequired
+          ? { label: "ورود به پلتفرم لازم است", className: "hot" }
+          : { label: "منبع عمومی", className: "" };
+      }
+
+      function parseSourceDate(value) {
+        if (!value) return null;
+        const short = String(value).match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{2})-(\d{2})$/i);
+        if (short) {
+          const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+          return new Date(Date.UTC(2000 + Number(short[3]), months[short[1].toLowerCase()], Number(short[2])));
+        }
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : date;
+      }
+
+      function ageDays(value) {
+        const date = parseSourceDate(value);
+        if (!date) return null;
+        return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
+      }
+
+      function freshness(row) {
+        const days = Number.isFinite(Number(row.ageDays)) ? Number(row.ageDays) : ageDays(row.publishedAt);
+        if (days === null) return { label: "تاریخ منبع نامشخص", className: "", stale: false, days: null };
+        if (days <= 2) return { label: "فوری • امروز/دیروز", className: "good", stale: false, days };
+        if (days <= 14) return { label: `${days} روزه • تازه`, className: "good", stale: false, days };
+        if (days <= 45) return { label: `${days} روزه • اخیر`, className: "hot", stale: false, days };
+        if (days <= 120) return { label: `${days} روزه • نیازمند تأیید مجدد`, className: "hot", stale: true, days };
+        return { label: `${days} روزه • قدیمی`, className: "bad", stale: true, days };
+      }
+
+      function normalizeRadarEvent(event) {
+        const data = event && event.data ? event.data : {};
+        return {
+          ...data,
+          id: data.id || event.messageKey,
+          messageKey: data.messageKey || event.messageKey,
+          sourceUrl: data.sourceUrl || decodeBase64Url(data.sourceLinkB64),
+          notes: data.notes || decodeBase64Url(data.notesB64),
+          receivedAt: event.receivedAt || data.firstSeenAt || "",
+          requiresApproval: data.requiresApproval !== false,
+          autoSend: false,
+        };
+      }
+
+      function reviewStatus(row) {
+        return state.radarStates.get(row.id)?.reviewStatus || row.outreachStatus || "new";
+      }
+
+      function reviewLabel(status) {
+        const labels = {
+          new: "منتظر بررسی",
+          awaiting_approval: "منتظر بررسی",
+          approved: "تأیید تماس",
+          promoted: "ثبت در CRM",
+          dismissed: "کنار گذاشته شد",
+        };
+        return labels[status] || status;
+      }
+
+      function statusInfo(value) {
+        const normalized = String(value || "").trim().toLowerCase();
+        if (normalized === "action" || normalized === "need action") return ["Need Action", "نیاز به اقدام", ""];
+        if (normalized === "contacted") return ["Contacted", "تماس گرفته شد", "blue"];
+        if (normalized === "waiting for reply") return ["Waiting for Reply", "منتظر پاسخ", "blue"];
+        if (normalized === "replied") return ["Replied", "پاسخ داده", "green"];
+        if (normalized === "negotiating") return ["Negotiating", "در حال مذاکره", "blue"];
+        if (normalized === "quote sent") return ["Quote Sent", "قیمت ارسال شد", "blue"];
+        if (normalized === "won") return ["Won", "موفق", "green"];
+        if (normalized === "lost") return ["Lost", "ناموفق", "red"];
+        return ["New", "جدید", ""];
+      }
+
+      function cleanSummary(value) {
+        const text = String(value || "سیگنال خرید شناسایی شده؛ جزئیات در منبع بررسی شود.")
+          .replace(/\s*\|\s*/g, " • ")
+          .replace(/Fetching\.{0,3}$/i, "")
+          .trim();
+        return text.length > 680 ? `${text.slice(0, 677)}…` : text;
+      }
+
+      function draftFor(row) {
+        const contact = contactInfo(row.contact);
+        const greeting = contact.name ? `Hello ${contact.name},` : "Hello,";
+        const detail = row.quantity || row.qty
+          ? ` I noted the indicated quantity of ${row.quantity || row.qty}.`
+          : "";
+        return `${greeting}\n\nI saw your recent sourcing requirement for dates for Indonesia.${detail} I represent Seventh Sky Trade, an Iranian dates export company with direct supply access from Bushehr.\n\nCould you please confirm whether Iranian-origin date varieties are acceptable, and share the required variety or texture profile, grade/size, packing format, exact quantity, destination port and target arrival date? We can then review suitable options, including Kabkab or other Iranian grades, subject to current availability and your final specifications.\n\nBest regards,\nAmir Kharazmi\nSeventh Sky Trade`;
+      }
+
+      function nextActionFor(row) {
+        const fresh = freshness(row);
+        if (fresh.stale) return "اول فعال‌بودن RFQ را تأیید کن؛ قبل از آن قیمت یا موجودی اعلام نشود.";
+        if (row.sourceType === "direct_buy_lead") return "جزئیات RFQ را در منبع باز کن و پیام پیشنهادی را برای تأیید نهایی بررسی کن.";
+        return "هویت Buyer و فعال‌بودن نیاز را در منبع بررسی کن؛ سپس درباره تماس تصمیم بگیر.";
+      }
+
+      function showToast(message) {
+        const toast = $("toast");
+        toast.textContent = message;
+        toast.classList.remove("hidden");
+        window.clearTimeout(showToast.timer);
+        showToast.timer = window.setTimeout(() => toast.classList.add("hidden"), 5200);
+      }
+
+      function renderOverview() {
+        const activeRadar = state.radar.filter((row) => reviewStatus(row) !== "dismissed");
+        $("radar-total").textContent = activeRadar.length.toLocaleString("fa-IR");
+        $("radar-new").textContent = activeRadar.filter((row) => ["new", "awaiting_approval"].includes(reviewStatus(row))).length.toLocaleString("fa-IR");
+        $("radar-a").textContent = activeRadar.filter((row) => row.score === "A").length.toLocaleString("fa-IR");
+        $("buyer-total").textContent = state.leads.length.toLocaleString("fa-IR");
+      }
+
+      function filteredRadar() {
+        const query = $("radar-search").value.trim().toLowerCase();
+        const filter = $("radar-filter").value;
+        return state.radar.filter((row) => {
+          const contact = contactInfo(row.contact);
+          const status = reviewStatus(row);
+          const haystack = [row.company, row.product, row.marketSource, row.notes, row.contact, row.country].join(" ").toLowerCase();
+          if (query && !haystack.includes(query)) return false;
+          if (filter === "new" && !["new", "awaiting_approval"].includes(status)) return false;
+          if (filter === "approved" && status !== "approved") return false;
+          if (filter === "dismissed" && status !== "dismissed") return false;
+          if (filter === "A" && row.score !== "A") return false;
+          if (filter === "direct" && !contact.direct) return false;
+          if (filter === "platform" && contact.direct) return false;
+          return true;
+        });
+      }
+
+      function renderRadar() {
+        const rows = filteredRadar();
+        $("radar-count").textContent = `${rows.length.toLocaleString("fa-IR")} مورد`;
+        $("radar-list").innerHTML = rows.map((row) => {
+          const contact = contactInfo(row.contact);
+          const fresh = freshness(row);
+          const access = sourceAccess(row);
+          const status = reviewStatus(row);
+          const sourceUrl = safeHttpUrl(row.sourceUrl);
+          const statusClass = status === "approved" || status === "promoted" ? "good" : status === "dismissed" ? "bad" : "hot";
+          const channel = contact.direct ? "تماس مستقیم موجود" : "پیام داخل پلتفرم";
+          return `<article class="radar-card ${row.score === "A" ? "priority-a" : ""} ${fresh.stale ? "is-stale" : ""}">
+            <div class="radar-top">
+              <div>
+                <h3 class="signal-title">${esc(row.company || "Buyer signal")}</h3>
+                <div class="meta">${esc(row.marketSource || "Market Radar")} • ${esc(row.country || "Indonesia")}</div>
+              </div>
+              <div class="score"><small>اولویت</small><b>${esc(row.score || "B")}</b></div>
+            </div>
+            <div class="tag-row">
+              <span class="tag ${row.sourceType === "direct_buy_lead" ? "good" : ""}">${row.sourceType === "direct_buy_lead" ? "RFQ مستقیم" : "سیگنال وب"}</span>
+              <span class="tag ${fresh.className}">${esc(fresh.label)}</span>
+              <span class="tag ${access.className}">${esc(access.label)}</span>
+              <span class="tag">${esc(channel)}</span>
+              <span class="tag ${statusClass}">${esc(reviewLabel(status))}</span>
+            </div>
+            ${row.contact ? `<div class="meta">مخاطب ثبت‌شده: ${esc(row.contact)}</div>` : ""}
+            <div class="signal-summary">${esc(cleanSummary(row.notes))}</div>
+            <div class="action-box"><div class="label">اقدام پیشنهادی</div><div class="action">${esc(nextActionFor(row))}</div></div>
+            <div class="action-row">
+              ${sourceUrl ? `<a class="secondary" href="${esc(sourceUrl)}" target="_blank" rel="noopener noreferrer">دیدن منبع RFQ</a>` : ""}
+              <button class="primary" type="button" data-prepare="${esc(row.id)}">بررسی و تأیید پیام</button>
+              <button class="secondary" type="button" data-promote="${esc(row.id)}">ثبت در پرونده مشتریان</button>
+              ${status !== "dismissed" ? `<button class="danger-button" type="button" data-dismiss="${esc(row.id)}">کنار گذاشتن</button>` : ""}
+            </div>
+          </article>`;
+        }).join("") || '<div class="empty">در این فیلتر فرصتی نیست.</div>';
+      }
+
+      function currentLead(row) {
+        return { ...row, ...(state.leadStates.get(row.id) || {}) };
+      }
+
+      function shortAction(row) {
+        const current = currentLead(row);
+        if (current.next && /[\u0600-\u06ff]/.test(current.next)) return current.next;
+        const raw = String(row.next || "");
+        if (/whatsapp/i.test(raw)) return "نیاز فعلی Buyer را در واتس‌اپ تأیید کن.";
+        if (/email/i.test(raw)) return "ایمیل معرفی کوتاه را بعد از بررسی نهایی آماده کن.";
+        if (/quote|price/i.test(raw)) return "حجم، گرید، بسته‌بندی و مقصد را پیش از قیمت‌دادن تأیید کن.";
+        return "پرونده را باز کن و اقدام بعدی مشخص ثبت کن.";
+      }
+
+      function filteredBuyers(actionOnly = false) {
+        const query = $("buyer-search").value.trim().toLowerCase();
+        const filter = $("buyer-filter").value;
+        return state.leads.filter((row) => {
+          const current = currentLead(row);
+          const status = statusInfo(current.status || row.status)[0];
+          const haystack = [row.company, row.country, row.product, row.source].join(" ").toLowerCase();
+          if (query && !haystack.includes(query)) return false;
+          if (filter && status !== filter) return false;
+          if (actionOnly && !["New", "Need Action", "Replied", "Negotiating"].includes(status)) return false;
+          return true;
+        });
+      }
+
+      function renderBuyers() {
+        const rows = filteredBuyers(false);
+        $("buyer-count").textContent = `${rows.length.toLocaleString("fa-IR")} مورد`;
+        $("buyer-list").innerHTML = rows.map((row) => {
+          const current = currentLead(row);
+          const info = statusInfo(current.status || row.status);
+          return `<article class="lead">
+            <div class="lead-top">
+              <div><h3 class="company">${esc(row.company || "Unknown Buyer")}</h3><div class="meta">${esc(row.country || "—")} • ${esc(row.product || "Dates")}</div></div>
+              <div class="score"><small>امتیاز</small><b>${esc(row.score || "—")}</b></div>
+            </div>
+            <div class="action-box"><div class="label">اقدام بعدی</div><div class="action">${esc(shortAction(row))}</div></div>
+            <div class="row">
+              <div class="mini"><div class="label">وضعیت</div><div class="value"><span class="status ${info[2]}">${esc(info[1])}</span></div></div>
+              <div class="mini"><div class="label">پیگیری</div><div class="value">${esc(current.follow || "تعیین نشده")}</div></div>
+            </div>
+            <div class="action-row"><a class="primary full" href="negotiation-room.html?lead=${encodeURIComponent(row.id)}">باز کردن پرونده مشتری</a></div>
+          </article>`;
+        }).join("") || '<div class="empty">موردی نیست.</div>';
+      }
+
+      function renderToday() {
+        const radarActions = state.radar
+          .filter((row) => ["new", "awaiting_approval"].includes(reviewStatus(row)))
+          .sort((a, b) => {
+            const score = (b.score === "A") - (a.score === "A");
+            if (score) return score;
+            return String(b.receivedAt || "").localeCompare(String(a.receivedAt || ""));
+          })
+          .slice(0, 3);
+        const buyerActions = filteredBuyers(true).slice(0, 4);
+        const items = [
+          ...radarActions.map((row) => ({
+            type: "RFQ",
+            title: row.company,
+            detail: nextActionFor(row),
+            action: `<button class="primary full" type="button" data-prepare="${esc(row.id)}">بررسی پیام این فرصت</button>`,
+          })),
+          ...buyerActions.map((row) => ({
+            type: "CRM",
+            title: row.company,
+            detail: shortAction(row),
+            action: `<a class="secondary full" href="negotiation-room.html?lead=${encodeURIComponent(row.id)}">باز کردن پرونده</a>`,
+          })),
+        ];
+        $("today").innerHTML = items.map((item, index) => `<article class="lead">
+          <div class="lead-top"><div><span class="tag ${item.type === "RFQ" ? "good" : ""}">${item.type}</span><h3 class="company" style="margin-top:8px">${(index + 1).toLocaleString("fa-IR")}. ${esc(item.title || "Buyer")}</h3></div></div>
+          <div class="action-box"><div class="action">${esc(item.detail)}</div></div>
+          <div class="action-row">${item.action}</div>
+        </article>`).join("") || '<div class="today"><strong>اقدام فوری ثبت نشده است.</strong></div>';
+      }
+
+      function setView(view) {
+        state.view = view;
+        ["radar", "buyers", "actions"].forEach((name) => {
+          $(`${name}-view`).classList.toggle("hidden", name !== view);
+        });
+        document.querySelectorAll("[data-view]").forEach((node) => node.classList.toggle("active", node.dataset.view === view));
+        if (view === "actions") renderToday();
+        history.replaceState(null, "", `#${view}`);
+      }
+
+      function openApproval(row) {
+        state.selectedRadarId = row.id;
+        const contact = contactInfo(row.contact);
+        const source = safeHttpUrl(row.sourceUrl);
+        const select = $("approval-channel");
+        const options = [];
+        if (contact.phone) options.push(["whatsapp", `واتس‌اپ • +${contact.phone}`]);
+        if (contact.email) options.push(["email", `ایمیل • ${contact.email}`]);
+        if (source) options.push(["platform", "Inquire / پیام داخل پلتفرم منبع"]);
+        select.innerHTML = options.map(([value, label]) => `<option value="${value}">${esc(label)}</option>`).join("");
+        $("approval-recipient").textContent = row.contact ? `${row.company} • ${row.contact}` : row.company || "Buyer";
+        $("approval-message").value = state.radarStates.get(row.id)?.approvedDraft || draftFor(row);
+        $("approval-check").checked = false;
+        $("approve-open").disabled = true;
+        $("approval-error").classList.add("hidden");
+        $("approval-dialog").showModal();
+      }
+
+      async function approveAndOpen() {
+        const row = state.radar.find((item) => item.id === state.selectedRadarId);
+        if (!row || !$("approval-check").checked) return;
+        const channel = $("approval-channel").value;
+        const draft = $("approval-message").value.trim();
+        const contact = contactInfo(row.contact);
+        const source = safeHttpUrl(row.sourceUrl);
+        let target = "";
+        if (channel === "whatsapp" && contact.phone) target = `https://wa.me/${contact.phone}?text=${encodeURIComponent(draft)}`;
+        if (channel === "email" && contact.email) target = `mailto:${encodeURIComponent(contact.email)}?subject=${encodeURIComponent("Iranian Dates Supply — Seventh Sky Trade")}&body=${encodeURIComponent(draft)}`;
+        if (channel === "platform") target = source;
+        if (!target) {
+          $("approval-error").textContent = "برای این مسیر تماس، مقصد معتبر پیدا نشد.";
+          $("approval-error").classList.remove("hidden");
+          return;
+        }
+
+        const popup = window.open("about:blank", "_blank");
+        if (popup) popup.opener = null;
+        $("approve-open").disabled = true;
+        try {
+          const previous = state.radarStates.get(row.id) || {};
+          const approvedAt = new Date().toISOString();
+          const nextState = {
+            ...previous,
+            reviewStatus: "approved",
+            outreachApprovedAt: approvedAt,
+            outreachChannel: channel,
+            approvedDraft: draft,
+            autoSend: false,
+            requiresApproval: true,
+          };
+          await SevenSkyAPI.saveState(row.id, nextState);
+          await SevenSkyAPI.addActivity(row.id, "outreach_approved", {
+            title: "تأیید تماس توسط امیر",
+            channel,
+            approvedAt,
+            sent: false,
+            detail: "فقط مسیر تماس باز شد؛ ارسال نهایی خودکار نیست.",
+          });
+          state.radarStates.set(row.id, nextState);
+          if (channel === "platform" && navigator.clipboard) {
+            navigator.clipboard.writeText(draft).catch(() => {});
+          }
+          if (popup) popup.location.href = target;
+          else window.location.href = target;
+          $("approval-dialog").close();
+          renderOverview();
+          renderRadar();
+          showToast("تأیید ثبت شد؛ مسیر تماس باز شد. ارسال نهایی هنوز با خودت است.");
+        } catch (error) {
+          if (popup) popup.close();
+          $("approval-error").textContent = `ثبت تأیید انجام نشد: ${error.message}`;
+          $("approval-error").classList.remove("hidden");
+          $("approve-open").disabled = false;
+        }
+      }
+
+      async function promoteRadar(row) {
+        const existing = state.leads.some((lead) => lead.id === row.id);
+        if (existing) {
+          setView("buyers");
+          showToast("این فرصت قبلاً در پرونده مشتریان ثبت شده است.");
+          return;
+        }
+        const lead = {
+          id: row.id,
+          company: row.company || "Radar Buyer",
+          country: row.country || "Indonesia",
+          product: row.product || "Dates / Kurma",
+          qty: row.quantity || row.qty || "",
+          source: row.marketSource || "Market Radar",
+          sourceUrl: safeHttpUrl(row.sourceUrl),
+          contact: row.contact || "",
+          score: row.score || "B",
+          status: "Need Action",
+          next: "منبع را اعتبارسنجی کن؛ هر پیام فقط بعد از تأیید صریح امیر باز شود.",
+          notes: row.notes || "",
+          message: draftFor(row),
+          radar: true,
+          requiresApproval: true,
+          autoSend: false,
+          created: new Date().toISOString(),
+        };
+        try {
+          await SevenSkyAPI.promoteLeads([lead]);
+          const previous = state.radarStates.get(row.id) || {};
+          const nextState = { ...previous, reviewStatus: "promoted", status: "Need Action", requiresApproval: true, autoSend: false };
+          await SevenSkyAPI.saveState(row.id, nextState);
+          await SevenSkyAPI.addActivity(row.id, "radar_promoted", {
+            title: "فرصت رادار به CRM منتقل شد",
+            detail: "ارسال پیام همچنان نیازمند تأیید امیر است.",
+          });
+          state.radarStates.set(row.id, nextState);
+          state.leadStates.set(row.id, nextState);
+          state.leads.unshift(lead);
+          renderOverview();
+          renderRadar();
+          renderBuyers();
+          showToast("فرصت در پرونده مشتریان ثبت شد.");
+        } catch (error) {
+          showToast(`ثبت در CRM انجام نشد: ${error.message}`);
+        }
+      }
+
+      async function dismissRadar(row) {
+        if (!window.confirm("این سیگنال بدون حذف داده، از صف بررسی کنار گذاشته شود؟")) return;
+        try {
+          const previous = state.radarStates.get(row.id) || {};
+          const nextState = { ...previous, reviewStatus: "dismissed", dismissedAt: new Date().toISOString() };
+          await SevenSkyAPI.saveState(row.id, nextState);
+          await SevenSkyAPI.addActivity(row.id, "radar_dismissed", { title: "سیگنال کنار گذاشته شد" });
+          state.radarStates.set(row.id, nextState);
+          renderOverview();
+          renderRadar();
+          showToast("سیگنال از صف بررسی کنار گذاشته شد.");
+        } catch (error) {
+          showToast(`ذخیره انجام نشد: ${error.message}`);
+        }
+      }
+
+      async function boot() {
+        try {
+          await SevenSkyAPI.health();
+          $("live").textContent = "متصل ✓";
+          $("live").classList.add("ok");
+
+          const [leadRows, inboxEvents] = await Promise.all([
+            SevenSkyAPI.leads(),
+            SevenSkyAPI.inbox(300, "market_radar"),
+          ]);
+          state.leads = leadRows.filter((row) => !/^test/i.test(String(row.id || row.company || "")));
+          state.radar = inboxEvents
+            .map(normalizeRadarEvent)
+            .filter((row) => row.source === "market_radar" && row.radar === true)
+            .sort((a, b) => String(b.receivedAt || b.firstSeenAt || "").localeCompare(String(a.receivedAt || a.firstSeenAt || "")));
+
+          const leadStatePairs = await Promise.all(state.leads.map(async (row) => [row.id, await SevenSkyAPI.state(row.id).catch(() => null)]));
+          leadStatePairs.forEach(([id, value]) => state.leadStates.set(id, value || {}));
+          const radarStatePairs = await Promise.all(state.radar.map(async (row) => [row.id, await SevenSkyAPI.state(row.id).catch(() => null)]));
+          radarStatePairs.forEach(([id, value]) => state.radarStates.set(id, value || {}));
+
+          $("last-sync").textContent = `آخرین همگام‌سازی: ${new Intl.DateTimeFormat("fa-IR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}`;
+          renderOverview();
+          renderRadar();
+          renderBuyers();
+          renderToday();
+          const initial = ["radar", "buyers", "actions"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "radar";
+          setView(initial);
+        } catch (error) {
+          $("live").textContent = "خطای اتصال";
+          $("live").classList.add("bad");
+          $("last-sync").textContent = error.message;
+          $("radar-list").innerHTML = `<div class="error-box">اتصال به داده زنده برقرار نشد: ${esc(error.message)}</div>`;
+          $("buyer-list").innerHTML = `<div class="error-box">دریافت پرونده‌ها انجام نشد.</div>`;
+        }
+      }
+
+      async function refreshRadarOnly() {
+        try {
+          const inboxEvents = await SevenSkyAPI.inbox(300, "market_radar");
+          const rows = inboxEvents
+            .map(normalizeRadarEvent)
+            .filter((row) => row.source === "market_radar" && row.radar === true)
+            .sort((a, b) => String(b.receivedAt || b.firstSeenAt || "").localeCompare(String(a.receivedAt || a.firstSeenAt || "")));
+          const unseen = rows.filter((row) => !state.radarStates.has(row.id));
+          const pairs = await Promise.all(unseen.map(async (row) => [row.id, await SevenSkyAPI.state(row.id).catch(() => null)]));
+          pairs.forEach(([id, value]) => state.radarStates.set(id, value || {}));
+          state.radar = rows;
+          $("last-sync").textContent = `آخرین همگام‌سازی: ${new Intl.DateTimeFormat("fa-IR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}`;
+          renderOverview();
+          renderRadar();
+          if (state.view === "actions") renderToday();
+        } catch (_) {
+          $("last-sync").textContent = "به‌روزرسانی لحظه‌ای ناموفق بود؛ داده قبلی حفظ شد.";
+        }
+      }
+
+      document.querySelectorAll("[data-view]").forEach((node) => node.addEventListener("click", (event) => {
+        if (node.tagName === "A") event.preventDefault();
+        setView(node.dataset.view);
+      }));
+      $("radar-search").addEventListener("input", renderRadar);
+      $("radar-filter").addEventListener("change", renderRadar);
+      $("buyer-search").addEventListener("input", renderBuyers);
+      $("buyer-filter").addEventListener("change", renderBuyers);
+      document.addEventListener("click", (event) => {
+        const prepare = event.target.closest("[data-prepare]");
+        if (prepare) {
+          const row = state.radar.find((item) => item.id === prepare.dataset.prepare);
+          if (row) openApproval(row);
+        }
+        const promote = event.target.closest("[data-promote]");
+        if (promote) {
+          const row = state.radar.find((item) => item.id === promote.dataset.promote);
+          if (row) promoteRadar(row);
+        }
+        const dismiss = event.target.closest("[data-dismiss]");
+        if (dismiss) {
+          const row = state.radar.find((item) => item.id === dismiss.dataset.dismiss);
+          if (row) dismissRadar(row);
+        }
+      });
+      $("approval-check").addEventListener("change", () => {
+        $("approve-open").disabled = !$("approval-check").checked;
+      });
+      $("approve-open").addEventListener("click", approveAndOpen);
+      $("dialog-close").addEventListener("click", () => $("approval-dialog").close());
+      $("dialog-cancel").addEventListener("click", () => $("approval-dialog").close());
+      $("approval-dialog").addEventListener("click", (event) => {
+        if (event.target === $("approval-dialog")) $("approval-dialog").close();
+      });
+      window.addEventListener("hashchange", () => {
+        const view = location.hash.slice(1);
+        if (["radar", "buyers", "actions"].includes(view) && view !== state.view) setView(view);
+      });
+
+      boot();
+      window.setInterval(() => {
+        if (!document.hidden) refreshRadarOnly();
+      }, 60000);
+    </script>
+  </body>
+</html>

@@ -1,33 +1,25 @@
-Seventh Sky Command Center — Deploy to app.7skytrade.com
+Seventh Sky Command Center — app.7skytrade.com
 
-فایل‌های این پوشه:
-1) index.html
-2) backend-client-v2.js
-3) negotiation-room.html
-4) smoke-test.html
+نسخه فعلی:
+- Market Radar و RFQ در صفحه اول مرکز فرمان نمایش داده می‌شود.
+- داده‌ها از MySQL مرکزی و api-proxy.php خوانده می‌شوند.
+- هر پیام پیشنهادی قبل از باز شدن مسیر تماس، به تأیید صریح امیر نیاز دارد.
+- سیستم هیچ پیام واتس‌اپ، ایمیل یا پیام پلتفرمی را خودکار ارسال نمی‌کند.
+- تأیید تماس و انتقال فرصت به CRM در پایگاه‌داده ثبت می‌شود.
 
-مقصد همه فایل‌ها:
-/domains/app.7skytrade.com/public_html/
+استقرار:
+- Workflow با نام Deploy Command Center App فایل‌های این پوشه را روی
+  /domains/app.7skytrade.com/public_html/
+  قرار می‌دهد.
+- app-api-config.php فقط روی سرور نگهداری می‌شود و هرگز در GitHub قرار نمی‌گیرد.
+- پس از استقرار، Workflow صفحه اصلی، Approval Gate، Health API و مسیر خواندن Radar را کنترل می‌کند.
 
-روش Deploy:
-- از index.html فعلی روی هاست بکاپ بگیر یا نامش را index-before-crm.html کن.
-- چهار فایل بالا را با همین نام‌ها داخل public_html آپلود کن.
-- API Token باید از قبل در localStorage همین Origin با کلید 7skyApiToken باشد. Command Center فعلی قبلاً همین Token را ذخیره کرده است.
-- سپس https://app.7skytrade.com/smoke-test.html را باز کن و تست را اجرا کن.
-- فقط اگر ALL TESTS PASSED نمایش داده شد، https://app.7skytrade.com را باز کن.
+فایل‌های اصلی:
+- index.html: Command Center یکپارچه
+- app.css: رابط موبایل و دسکتاپ
+- backend-client.js: ارتباط امن از طریق proxy سمت سرور
+- negotiation-room.html: پرونده مشتری
+- automation-status.html: وضعیت رادار و پایگاه‌داده
+- api-proxy.php: واسط سمت سرور؛ Token خصوصی فقط در app-api-config.php است
 
-نتیجه مورد انتظار:
-- Backend: Connected
-- TEST Buyer از Buyer Inbox عملیاتی حذف شده باشد.
-- هر Buyer دکمه Open CRM داشته باشد.
-- Open CRM → negotiation-room.html?lead=... باز شود.
-- تغییر Status / Next Action / Follow-up / Notes با دکمه «ذخیره در MySQL» در crm_state ذخیره شود.
-- ذخیره پرونده یک Activity هم در جدول activities ثبت کند.
-- Timeline از MySQL خوانده شود.
-- Inbox eventهای match‌شده با lead_id در پرونده Buyer نمایش داده شوند.
-- آخرین Pricing snapshot در صورت وجود نمایش داده شود.
-
-امنیت بعد از تست:
-- smoke-test.html را حذف کن.
-- فایل‌های import آزمایشی و cors-test را حذف کن.
-- چون Token و DB password قبلاً در اسکرین‌شات/چت دیده شده‌اند، هر دو Secret را rotate کن و Token جدید را دوباره در App ذخیره کن.
+فایل smoke-test.html در استقرار خودکار آپلود نمی‌شود.

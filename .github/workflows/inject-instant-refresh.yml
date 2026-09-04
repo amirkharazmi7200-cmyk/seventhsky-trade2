@@ -8,6 +8,8 @@ on:
       - 'manifest.webmanifest'
       - 'sw.js'
       - 'live/**'
+      - 'deploy-app/**'
+      - 'tools/market_radar.py'
       - 'data/leads.json'
       - 'backend-iranserver/**'
       - '.github/workflows/deploy-iranserver-backend.yml'
@@ -50,6 +52,14 @@ jobs:
             backend-iranserver/config.example.php \
             backend-iranserver/.htaccess \
             .github/workflows/deploy-iranserver-backend.yml \
+            .github/workflows/deploy-app-iranserver.yml \
+            .github/workflows/market-radar-poller-v2.yml \
+            deploy-app/index.html \
+            deploy-app/app.css \
+            deploy-app/backend-client.js \
+            deploy-app/automation-status.html \
+            deploy-app/api-proxy.php \
+            tools/market_radar.py \
             data/leads.json; do
             test -s "$f" || { echo "Missing or empty: $f"; exit 1; }
           done
@@ -69,6 +79,22 @@ jobs:
           grep -q 'backend-client-v1.js' live/command-center-v4-test.html
           grep -q 'backend-setup-v1.html' live/command-center-v4-test.html
           grep -q 'IRANSERVER_API_TOKEN' .github/workflows/deploy-iranserver-backend.yml
+          grep -q 'source=market_radar' .github/workflows/deploy-app-iranserver.yml
+      - name: Verify Market Radar approval gate and discovery policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile tools/market_radar.py
+          grep -q 'requiresApproval: true' deploy-app/index.html
+          grep -q 'autoSend: false' deploy-app/index.html
+          grep -q 'approval-check' deploy-app/index.html
+          grep -q '"requiresApproval": True' tools/market_radar.py
+          grep -q '"autoSend": False' tools/market_radar.py
+          grep -q "cron: '\*/15 \* \* \* \*'" .github/workflows/market-radar-poller-v2.yml
+          if grep -Eqi 'sendgrid|smtp|twilio|whatsapp.*api|mailgun' tools/market_radar.py; then
+            echo 'Outbound messaging integration found in discovery worker'
+            exit 1
+          fi
       - name: Verify push-capable service worker infrastructure
         shell: bash
         run: |

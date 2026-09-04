@@ -1,0 +1,79 @@
+name: Deploy Command Center App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy-app/**'
+      - '.github/workflows/deploy-app-iranserver.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seventh-sky-command-center-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate deployment access
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.IRANSERVER_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.IRANSERVER_FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.IRANSERVER_FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for value in FTP_SERVER FTP_USERNAME FTP_PASSWORD; do
+            [ -n "${!value:-}" ] || { echo "Missing required deployment secret: $value"; exit 1; }
+          done
+          test -s deploy-app/index.html
+          test -s deploy-app/app.css
+          test -s deploy-app/backend-client.js
+          test -s deploy-app/api-proxy.php
+
+      - name: Enforce manual-approval messaging policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'requiresApproval: true' deploy-app/index.html
+          grep -q 'autoSend: false' deploy-app/index.html
+          grep -q 'approval-check' deploy-app/index.html
+          grep -q 'ارسال نهایی.*دستی' deploy-app/index.html
+
+      - name: Upload Command Center without deleting server-only config
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.IRANSERVER_FTP_SERVER }}
+          username: ${{ secrets.IRANSERVER_FTP_USERNAME }}
+          password: ${{ secrets.IRANSERVER_FTP_PASSWORD }}
+          local-dir: ./deploy-app/
+          server-dir: ${{ secrets.IRANSERVER_APP_REMOTE_DIR || '/domains/app.7skytrade.com/public_html/' }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/app-api-config.php
+            **/smoke-test.html
+
+      - name: Verify live Command Center and radar data path
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            PAGE=$(curl --fail --silent --show-error --max-time 20 "https://app.7skytrade.com/?deploy=${GITHUB_SHA}-${attempt}" || true)
+            if grep -q 'رادار خرید و RFQ' <<<"$PAGE"; then break; fi
+            sleep 8
+          done
+          grep -q 'رادار خرید و RFQ' <<<"$PAGE"
+          grep -q 'approval-check' <<<"$PAGE"
+          HEALTH=$(curl --fail --silent --show-error --max-time 20 'https://app.7skytrade.com/api-proxy.php?resource=health')
+          python -c 'import json,sys; d=json.loads(sys.argv[1]); assert d.get("ok") is True and d.get("database")=="connected"' "$HEALTH"
+          RADAR=$(curl --fail --silent --show-error --max-time 20 'https://app.7skytrade.com/api-proxy.php?resource=inbox&source=market_radar&limit=1')
+          python -c 'import json,sys; d=json.loads(sys.argv[1]); assert d.get("ok") is True' "$RADAR"

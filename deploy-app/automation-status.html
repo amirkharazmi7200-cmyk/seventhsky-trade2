@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#06101a" />
+    <title>وضعیت اتوماسیون — Seventh Sky</title>
+    <link rel="stylesheet" href="app.css?v=20260904-radar" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="top">
+        <a href="index.html#radar" class="secondary">بازگشت</a>
+        <div class="brand"><small>SEVENTH SKY</small><h1>اتوماسیون رادار</h1></div>
+      </header>
+      <section class="panel">
+        <div class="section-head"><div><h2>وضعیت زنده</h2><div class="eyebrow">پایگاه‌داده و آخرین سیگنال‌های Market Radar</div></div></div>
+        <div id="health" class="today">در حال بررسی اتصال…</div>
+        <div class="kpis">
+          <div class="kpi"><b id="signals">—</b><span>سیگنال ذخیره‌شده</span></div>
+          <div class="kpi"><b id="direct-rfq">—</b><span>RFQ مستقیم</span></div>
+          <div class="kpi"><b id="score-a">—</b><span>اولویت A</span></div>
+          <div class="kpi"><b id="auto-send">۰</b><span>ارسال خودکار</span></div>
+        </div>
+        <div class="approval-note"><strong>ارسال خودکار خاموش است.</strong> موتور رادار فقط کشف و ثبت می‌کند. هر مسیر تماس باید در مرکز فرمان توسط امیر تأیید شود.</div>
+      </section>
+      <section class="panel">
+        <div class="section-head"><div><h2>آخرین کشف</h2></div></div>
+        <div id="latest" class="empty">در حال دریافت…</div>
+      </section>
+    </main>
+    <script src="backend-client.js?v=20260904-radar"></script>
+    <script>
+      const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[char]);
+      const decode = (value) => {
+        try {
+          let text = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+          while (text.length % 4) text += "=";
+          return new TextDecoder().decode(Uint8Array.from(atob(text), (char) => char.charCodeAt(0)));
+        } catch (_) { return ""; }
+      };
+      (async () => {
+        try {
+          const health = await SevenSkyAPI.health();
+          const events = (await SevenSkyAPI.inbox(300, "market_radar"))
+            .filter((event) => event.data?.source === "market_radar" && event.data?.radar === true);
+          document.getElementById("health").innerHTML = `<strong>سرور و پایگاه‌داده فعال است ✓</strong><p>زمان پاسخ سرور: ${esc(health.time || "اکنون")}</p>`;
+          document.getElementById("signals").textContent = events.length.toLocaleString("fa-IR");
+          document.getElementById("direct-rfq").textContent = events.filter((event) => event.data?.sourceType === "direct_buy_lead").length.toLocaleString("fa-IR");
+          document.getElementById("score-a").textContent = events.filter((event) => event.data?.score === "A").length.toLocaleString("fa-IR");
+          const latest = events[0];
+          document.getElementById("latest").innerHTML = latest
+            ? `<article class="radar-card"><h3 class="signal-title">${esc(latest.data.company || "Buyer signal")}</h3><div class="meta">${esc(latest.data.marketSource || "Market Radar")} • ${esc(latest.receivedAt || "")}</div><div class="signal-summary">${esc(latest.data.notes || decode(latest.data.notesB64) || "سیگنال ثبت شده است.")}</div></article>`
+            : "هنوز سیگنال راداری ثبت نشده است.";
+        } catch (error) {
+          document.getElementById("health").textContent = `خطا: ${error.message}`;
+          document.getElementById("latest").textContent = "داده زنده دریافت نشد.";
+        }
+      })();
+    </script>
+  </body>
+</html>

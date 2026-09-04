@@ -167,9 +167,18 @@ try {
 
     if ($resource === 'inbox') {
         if ($method === 'GET') {
-            $limit = max(1, min(100, (int)($_GET['limit'] ?? 30)));
-            $q = $pdo->prepare('SELECT message_key,lead_id,payload,received_at FROM inbox_events ORDER BY received_at DESC LIMIT ' . $limit);
-            $q->execute();
+            $limit = max(1, min(300, (int)($_GET['limit'] ?? 30)));
+            $source = strtolower(trim((string)($_GET['source'] ?? '')));
+            if ($source !== '' && !preg_match('/^[a-z0-9_-]{1,40}$/', $source)) {
+                out(['ok'=>false,'error'=>'invalid_source_filter'],400);
+            }
+            if ($source !== '') {
+                $q = $pdo->prepare('SELECT message_key,lead_id,payload,received_at FROM inbox_events WHERE payload LIKE ? ORDER BY received_at DESC LIMIT ' . $limit);
+                $q->execute(['%"source":"' . $source . '"%']);
+            } else {
+                $q = $pdo->prepare('SELECT message_key,lead_id,payload,received_at FROM inbox_events ORDER BY received_at DESC LIMIT ' . $limit);
+                $q->execute();
+            }
             $items=[]; foreach($q->fetchAll() as $r) $items[]=['messageKey'=>$r['message_key'],'leadId'=>$r['lead_id'],'data'=>payload($r),'receivedAt'=>$r['received_at']];
             out(['ok'=>true,'events'=>$items]);
         }

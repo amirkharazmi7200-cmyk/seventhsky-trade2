@@ -1,112 +1,13 @@
-name: Seventh Sky Market Radar Poller
+name: Seventh Sky Market Radar Poller (legacy disabled)
 
 on:
-  push:
-    paths:
-      - '.github/workflows/market-radar-poller.yml'
-  schedule:
-    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  radar:
+  legacy-disabled:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Poll buyer-intent search feeds and ingest discoveries
-        shell: python
-        run: |
-          import hashlib, html, json, re, urllib.parse, urllib.request, xml.etree.ElementTree as ET
-          from datetime import datetime, timezone
-
-          API = 'https://app.7skytrade.com/api-proxy.php?resource=bootstrap'
-          UA = 'Mozilla/5.0 SeventhSkyMarketRadar/1.0'
-
-          queries = [
-              ('Bing Web', '"dates buyer" Indonesia'),
-              ('Bing Web', '"date fruit" importer Indonesia'),
-              ('Bing Web', '"dates" distributor wholesaler Indonesia'),
-              ('Bing Web', 'kurma importir Indonesia distributor'),
-              ('Bing Web', '"looking for" dates supplier Indonesia'),
-              ('Bing Web', 'RFQ dates Indonesia importer'),
-              ('Bing Web', 'site:go4worldbusiness.com dates buyer Indonesia'),
-              ('Bing Web', 'site:tradekey.com dates buyer Indonesia'),
-              ('Bing Web', 'site:exporthub.com dates buyer Indonesia'),
-              ('Bing Web', 'site:alibaba.com dates buyer Indonesia'),
-          ]
-
-          intent_words = re.compile(r'\b(buyer|buying|buy|importer|import|distributor|wholesaler|procurement|rfq|request for quotation|looking for|seeking|supplier wanted|sourcing)\b|\b(importir|distributor|grosir|pembeli|mencari|permintaan)\b', re.I)
-          date_words = re.compile(r'\b(date fruit|dates|kurma|kabkab|mazafati|zahedi)\b', re.I)
-          ignore = re.compile(r'jobs?|recipe|tourism|festival|calendar|dating|romance', re.I)
-
-          def clean(s):
-              return re.sub(r'\s+', ' ', html.unescape(re.sub('<[^>]+>', ' ', s or ''))).strip()
-
-          def fetch_rss(q):
-              url = 'https://www.bing.com/search?' + urllib.parse.urlencode({'q': q, 'format': 'rss'})
-              req = urllib.request.Request(url, headers={'User-Agent': UA})
-              with urllib.request.urlopen(req, timeout=20) as r:
-                  return r.read()
-
-          def post_lead(lead):
-              data = json.dumps({'leads':[lead]}, ensure_ascii=False).encode()
-              req = urllib.request.Request(API, data=data, method='POST', headers={'Content-Type':'application/json','User-Agent':UA})
-              with urllib.request.urlopen(req, timeout=20) as r:
-                  body = r.read().decode('utf-8','replace')
-                  if r.status >= 300:
-                      raise RuntimeError(body)
-                  return body
-
-          discovered = 0
-          ingested = 0
-          errors = []
-          now = datetime.now(timezone.utc).isoformat()
-
-          for source, q in queries:
-              try:
-                  raw = fetch_rss(q)
-                  root = ET.fromstring(raw)
-                  for item in root.findall('.//item')[:15]:
-                      title = clean(item.findtext('title'))
-                      link = clean(item.findtext('link'))
-                      desc = clean(item.findtext('description'))
-                      pub = clean(item.findtext('pubDate'))
-                      text = f'{title} {desc}'
-                      if not title or not link: continue
-                      if ignore.search(text): continue
-                      if not date_words.search(text): continue
-                      if not intent_words.search(text): continue
-                      discovered += 1
-                      key = hashlib.sha256((link+'|'+title).encode()).hexdigest()[:20]
-                      score = 'A' if re.search(r'\b(rfq|request for quotation|looking for|seeking|buyer|buying|procurement|supplier wanted|mencari|permintaan)\b', text, re.I) else 'B'
-                      lead = {
-                          'id': f'radar-{key}',
-                          'company': title[:220],
-                          'country': 'Indonesia',
-                          'product': 'Dates / Kurma',
-                          'source': source,
-                          'sourceUrl': link,
-                          'status': 'Radar New',
-                          'score': score,
-                          'next': 'منبع را بررسی کن؛ اگر Buyer واقعی بود، پیام اولیه با تأیید امیر ارسال شود.',
-                          'notes': desc[:1200],
-                          'publishedAt': pub or now,
-                          'radar': True,
-                          'requiresApproval': True,
-                          'intent': 'buyer_signal',
-                          'query': q,
-                      }
-                      try:
-                          post_lead(lead)
-                          ingested += 1
-                      except Exception as e:
-                          errors.append(f'post {title[:50]}: {e}')
-              except Exception as e:
-                  errors.append(f'feed {q}: {e}')
-
-          print(json.dumps({'ok': not errors, 'discovered': discovered, 'ingested': ingested, 'errors': errors[:10]}, ensure_ascii=False))
-          if errors and ingested == 0:
-              raise SystemExit(1)
+      - run: echo "Legacy poller is disabled. The v3 discovery-only radar is the active scheduled workflow."
