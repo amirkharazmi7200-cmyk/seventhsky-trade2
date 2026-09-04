@@ -1,0 +1,120 @@
+name: Seventh Sky Market Radar Poller v2
+
+on:
+  push:
+    paths:
+      - '.github/workflows/market-radar-poller-v2.yml'
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Watch Indonesia dates buyer signals and ingest
+        shell: python
+        run: |
+          import hashlib, html, json, re, subprocess, tempfile, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+          from datetime import datetime, timezone
+          from html.parser import HTMLParser
+
+          API='https://app.7skytrade.com/api-proxy.php?resource=bootstrap'
+          UA='Mozilla/5.0 (compatible; SeventhSkyMarketRadar/2.0; +https://7skytrade.com)'
+          NOW=datetime.now(timezone.utc)
+
+          class TextParser(HTMLParser):
+              def __init__(self): super().__init__(); self.parts=[]
+              def handle_data(self,d):
+                  d=' '.join(html.unescape(d).split())
+                  if d: self.parts.append(d)
+
+          def get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':UA,'Accept-Language':'en-US,en;q=0.9'})
+              with urllib.request.urlopen(req,timeout=25) as r: return r.read()
+
+          def post_lead(lead):
+              with tempfile.NamedTemporaryFile('w',encoding='utf-8',delete=False) as f:
+                  json.dump({'leads':[lead]},f,ensure_ascii=False); path=f.name
+              p=subprocess.run(['curl','--fail-with-body','--silent','--show-error','-X','POST',API,'-H','Content-Type: application/json','--data-binary','@'+path],capture_output=True,text=True,timeout=30)
+              if p.returncode!=0: raise RuntimeError((p.stderr or p.stdout)[:500])
+              data=json.loads(p.stdout)
+              if not data.get('ok'): raise RuntimeError(p.stdout[:500])
+              return data
+
+          def mklead(title,url,source,notes,published='',contact='',score='A',extra=None):
+              key=hashlib.sha256((source+'|'+url+'|'+title).encode()).hexdigest()[:20]
+              x={
+                'id':'radar-'+key,'company':title[:220],'country':'Indonesia','product':'Dates / Kurma',
+                'source':source,'sourceUrl':url,'status':'Radar New','score':score,
+                'next':'منبع را فوراً بررسی کن؛ اگر Buyer معتبر بود، پیام اولیه آماده است و از داخل کامند سنتر اقدام کن.',
+                'notes':notes[:1600],'publishedAt':published or NOW.isoformat(),'contact':contact,
+                'radar':True,'requiresApproval':True,'intent':'buyer_signal','firstSeenAt':NOW.isoformat()
+              }
+              if extra: x.update(extra)
+              return x
+
+          found=[]; errors=[]
+
+          # 1) Direct high-value buyer page: Go4WorldBusiness Indonesia dates buyers.
+          go4='https://www.go4worldbusiness.com/buyers/indonesia/dates.html'
+          try:
+              raw=get(go4).decode('utf-8','replace')
+              p=TextParser(); p.feed(raw); lines=p.parts
+              date_re=re.compile(r'^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{2}-\d{2}$')
+              idx=[i for i,s in enumerate(lines) if date_re.match(s)]
+              for pos,i in enumerate(idx):
+                  block=lines[i:min(idx[pos+1] if pos+1<len(idx) else i+80,i+80)]
+                  pub=block[0]
+                  if not pub.endswith('-26'): continue
+                  text=' | '.join(block)
+                  if not re.search(r'\b(dates?|medjool|mazafati|kurma|ajwa|sukari|kimia)\b',text,re.I): continue
+                  title=next((s for s in block[1:18] if re.search(r'^(Wanted\s*:|[A-Z][A-Za-z0-9 .,&()\-]{2,})',s) and s not in {'Inquire Now','Add to Favorites','Product Description'}),'Dates buyer signal')
+                  buyer_from=next((s for s in block if s.startswith('Buyer From')),'Buyer From Indonesia')
+                  contact=next((s.split(':',1)[1].strip() for s in block if s.startswith('Contact :') and ':' in s),'')
+                  qty=next((s for s in block if 'Quantity Required' in s or s.startswith('Quantity:')),'')
+                  terms=next((s for s in block if 'Payment Terms' in s),'')
+                  ship=next((s for s in block if 'Shipping Terms' in s),'')
+                  summary=' | '.join([z for z in [buyer_from,qty,ship,terms,text[:900]] if z])
+                  found.append(mklead(title,go4,'Go4WorldBusiness Buy Leads',summary,pub,contact,'A',{'sourceType':'direct_buy_lead'}))
+          except Exception as e: errors.append('go4:'+str(e))
+
+          # 2) Web-wide discovery for other B2B sources, strict Indonesia relevance.
+          queries=[
+            'site:tradekey.com dates buyer Indonesia RFQ',
+            'site:exporthub.com dates buyer Indonesia importer',
+            'site:go4worldbusiness.com/buyers/indonesia dates buyer',
+            '"kurma" "importir" Indonesia supplier',
+            '"dates" "buyer from Indonesia" supplier',
+            '"looking for supplier" dates Indonesia',
+            '"request for quotation" dates Indonesia'
+          ]
+          intent=re.compile(r'\b(buyer|importer|rfq|request for quotation|looking for supplier|buy lead|procurement|distributor|wholesaler|importir|pembeli|mencari)\b',re.I)
+          prod=re.compile(r'\b(dates?|date fruit|kurma|kabkab|mazafati|zahedi|medjool|ajwa|sukari)\b',re.I)
+          bad=re.compile(r'\b(recipe|dating|calendar|festival|tourism|jobs?)\b',re.I)
+          for q in queries:
+              try:
+                  url='https://www.bing.com/search?'+urllib.parse.urlencode({'q':q,'format':'rss'})
+                  root=ET.fromstring(get(url))
+                  for item in root.findall('.//item')[:12]:
+                      title=' '.join((item.findtext('title') or '').split()); link=' '.join((item.findtext('link') or '').split()); desc=' '.join((item.findtext('description') or '').split()); pub=' '.join((item.findtext('pubDate') or '').split())
+                      text=title+' '+desc+' '+link
+                      if not title or not link or bad.search(text): continue
+                      if 'indonesia' not in text.lower(): continue
+                      if not prod.search(text) or not intent.search(text): continue
+                      found.append(mklead(title,link,'B2B Web Radar',desc,pub,'','A' if re.search(r'\b(rfq|buy lead|looking for supplier|request for quotation)\b',text,re.I) else 'B',{'query':q,'sourceType':'web_discovery'}))
+              except Exception as e: errors.append('search:'+q+':'+str(e))
+
+          # Deduplicate inside this run, then upsert by stable id in Command Center.
+          uniq={x['id']:x for x in found}
+          ingested=0; post_errors=[]
+          for x in uniq.values():
+              try: post_lead(x); ingested+=1
+              except Exception as e: post_errors.append(x['company'][:60]+': '+str(e))
+
+          print(json.dumps({'ok':ingested>0 or not uniq,'found':len(found),'unique':len(uniq),'ingested':ingested,'source_errors':errors[:8],'post_errors':post_errors[:8]},ensure_ascii=False))
+          if uniq and ingested==0: raise SystemExit(1)
