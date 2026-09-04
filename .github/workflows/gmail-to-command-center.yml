@@ -10,13 +10,13 @@ jobs:
     steps:
       - name: Forward Gmail event to Command Center
         env:
-          EVENT_ID: ${{ github.event.client_payload.id }}
-          THREAD_ID: ${{ github.event.client_payload.threadId }}
-          FROM_NAME: ${{ github.event.client_payload.fromName }}
-          FROM_EMAIL: ${{ github.event.client_payload.fromEmail }}
+          EVENT_ID: ${{ github.event.client_payload.external_id }}
+          THREAD_ID: ${{ github.event.client_payload.thread_id }}
+          FROM_NAME: ${{ github.event.client_payload.from_name }}
+          FROM_EMAIL: ${{ github.event.client_payload.from_email }}
           SUBJECT: ${{ github.event.client_payload.subject }}
           SNIPPET: ${{ github.event.client_payload.snippet }}
-          RECEIVED_AT: ${{ github.event.client_payload.date }}
+          RECEIVED_AT: ${{ github.event.client_payload.received_at }}
         run: |
           payload=$(jq -n \
             --arg source "gmail" \
