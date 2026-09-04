@@ -1,6 +1,9 @@
 name: Seventh Sky Market Radar Poller
 
 on:
+  push:
+    paths:
+      - '.github/workflows/market-radar-poller.yml'
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
@@ -17,12 +20,11 @@ jobs:
         shell: python
         run: |
           import hashlib, html, json, re, urllib.parse, urllib.request, xml.etree.ElementTree as ET
-          from datetime import datetime, timezone, timedelta
+          from datetime import datetime, timezone
 
           API = 'https://app.7skytrade.com/api-proxy.php?resource=bootstrap'
           UA = 'Mozilla/5.0 SeventhSkyMarketRadar/1.0'
 
-          # Buyer-intent focused web searches. Bing exposes ordinary web-search results as RSS.
           queries = [
               ('Bing Web', '"dates buyer" Indonesia'),
               ('Bing Web', '"date fruit" importer Indonesia'),
