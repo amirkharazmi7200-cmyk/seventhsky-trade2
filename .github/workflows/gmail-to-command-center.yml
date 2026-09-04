@@ -19,6 +19,7 @@ jobs:
           RECEIVED_AT: ${{ github.event.client_payload.received_at }}
         run: |
           payload=$(jq -n \
+            --arg message_key "$EVENT_ID" \
             --arg source "gmail" \
             --arg external_id "$EVENT_ID" \
             --arg thread_id "$THREAD_ID" \
@@ -27,7 +28,7 @@ jobs:
             --arg subject "$SUBJECT" \
             --arg snippet "$SNIPPET" \
             --arg received_at "$RECEIVED_AT" \
-            '{source:$source,external_id:$external_id,thread_id:$thread_id,from_name:$from_name,from_email:$from_email,subject:$subject,snippet:$snippet,received_at:$received_at}')
+            '{message_key:$message_key,source:$source,external_id:$external_id,thread_id:$thread_id,from_name:$from_name,from_email:$from_email,subject:$subject,snippet:$snippet,received_at:$received_at}')
           curl --fail-with-body --silent --show-error \
             -X POST \
             -H 'Content-Type: application/json' \
