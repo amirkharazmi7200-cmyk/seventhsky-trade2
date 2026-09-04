@@ -1,0 +1,70 @@
+name: Market Radar to Command Center
+
+on:
+  repository_dispatch:
+    types: [market_radar_hit]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate and ingest radar hit
+        env:
+          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PAYLOAD:-}" ] || [ "$PAYLOAD" = "null" ]; then
+            echo "No payload; manual smoke only"
+            exit 0
+          fi
+
+          TITLE=$(jq -r '.title // "Untitled market signal"' <<<"$PAYLOAD")
+          URL=$(jq -r '.url // .source_url // ""' <<<"$PAYLOAD")
+          SOURCE=$(jq -r '.source // "Market Radar"' <<<"$PAYLOAD")
+          COUNTRY=$(jq -r '.country // "Indonesia"' <<<"$PAYLOAD")
+          PRODUCT=$(jq -r '.product // "Dates"' <<<"$PAYLOAD")
+          SUMMARY=$(jq -r '.summary // .description // ""' <<<"$PAYLOAD")
+          CONTACT=$(jq -r '.contact // ""' <<<"$PAYLOAD")
+          PUBLISHED=$(jq -r '.published_at // .publishedAt // ""' <<<"$PAYLOAD")
+          CHANNEL=$(jq -r '.channel // "web"' <<<"$PAYLOAD")
+          INTENT=$(jq -r '.intent // "market_signal"' <<<"$PAYLOAD")
+
+          KEY=$(printf '%s|%s' "$URL" "$TITLE" | sha256sum | cut -c1-20)
+          LEAD_ID="radar-$KEY"
+
+          SCORE="B"
+          TEXT=$(printf '%s %s' "$TITLE" "$SUMMARY" | tr '[:upper:]' '[:lower:]')
+          if grep -Eq 'buyer|buying|looking for|request for quotation|rfq|importer|import|distributor|wholesaler|procurement|supplier wanted|seeking supplier' <<<"$TEXT"; then SCORE="A"; fi
+
+          NEXT="بررسی منبع و تأیید Buyer؛ در صورت وجود اطلاعات تماس، پیام اولیه آماده و برای ارسال تأیید شود."
+          STATUS="Radar New"
+
+          LEAD=$(jq -n \
+            --arg id "$LEAD_ID" \
+            --arg company "$TITLE" \
+            --arg country "$COUNTRY" \
+            --arg product "$PRODUCT" \
+            --arg source "$SOURCE" \
+            --arg sourceUrl "$URL" \
+            --arg contact "$CONTACT" \
+            --arg status "$STATUS" \
+            --arg score "$SCORE" \
+            --arg next "$NEXT" \
+            --arg notes "$SUMMARY" \
+            --arg publishedAt "$PUBLISHED" \
+            --arg channel "$CHANNEL" \
+            --arg intent "$INTENT" \
+            '{id:$id,company:$company,country:$country,product:$product,source:$source,sourceUrl:$sourceUrl,contact:$contact,status:$status,score:$score,next:$next,notes:$notes,publishedAt:$publishedAt,channel:$channel,intent:$intent,radar:true,requiresApproval:true}')
+
+          BODY=$(jq -n --argjson lead "$LEAD" '{leads:[$lead]}')
+          RESP=$(curl --fail-with-body --silent --show-error \
+            -X POST 'https://app.7skytrade.com/api-proxy.php?resource=bootstrap' \
+            -H 'Content-Type: application/json' \
+            --data "$BODY")
+          echo "$RESP"
+          jq -e '.ok == true and .imported >= 1' <<<"$RESP" >/dev/null
+          echo "RADAR_INGEST_OK:$LEAD_ID"
