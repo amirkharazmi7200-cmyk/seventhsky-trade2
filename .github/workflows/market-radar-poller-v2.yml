@@ -41,9 +41,10 @@ jobs:
               with tempfile.NamedTemporaryFile('w',encoding='utf-8',delete=False) as f:
                   json.dump({'leads':[lead]},f,ensure_ascii=False); path=f.name
               p=subprocess.run(['curl','--fail-with-body','--silent','--show-error','-X','POST',API,'-H','Content-Type: application/json','--data-binary','@'+path],capture_output=True,text=True,timeout=30)
-              if p.returncode!=0: raise RuntimeError((p.stderr or p.stdout)[:500])
+              if p.returncode!=0:
+                  raise RuntimeError(('HTTP_BODY='+p.stdout+' STDERR='+p.stderr)[:1200])
               data=json.loads(p.stdout)
-              if not data.get('ok'): raise RuntimeError(p.stdout[:500])
+              if not data.get('ok'): raise RuntimeError(('HTTP_BODY='+p.stdout)[:1200])
               return data
 
           def mklead(title,url,source,notes,published='',contact='',score='A',extra=None):
@@ -59,8 +60,6 @@ jobs:
               return x
 
           found=[]; errors=[]
-
-          # 1) Direct high-value buyer page: Go4WorldBusiness Indonesia dates buyers.
           go4='https://www.go4worldbusiness.com/buyers/indonesia/dates.html'
           try:
               raw=get(go4).decode('utf-8','replace')
@@ -83,7 +82,6 @@ jobs:
                   found.append(mklead(title,go4,'Go4WorldBusiness Buy Leads',summary,pub,contact,'A',{'sourceType':'direct_buy_lead'}))
           except Exception as e: errors.append('go4:'+str(e))
 
-          # 2) Web-wide discovery for other B2B sources, strict Indonesia relevance.
           queries=[
             'site:tradekey.com dates buyer Indonesia RFQ',
             'site:exporthub.com dates buyer Indonesia importer',
@@ -109,7 +107,6 @@ jobs:
                       found.append(mklead(title,link,'B2B Web Radar',desc,pub,'','A' if re.search(r'\b(rfq|buy lead|looking for supplier|request for quotation)\b',text,re.I) else 'B',{'query':q,'sourceType':'web_discovery'}))
               except Exception as e: errors.append('search:'+q+':'+str(e))
 
-          # Deduplicate inside this run, then upsert by stable id in Command Center.
           uniq={x['id']:x for x in found}
           ingested=0; post_errors=[]
           for x in uniq.values():
