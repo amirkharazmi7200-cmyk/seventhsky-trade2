@@ -38,6 +38,19 @@ jobs:
           test -s deploy-app/backend-client.js
           test -s deploy-app/api-proxy.php
 
+      - name: Normalize FTP server address
+        id: ftp-host
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.IRANSERVER_FTP_SERVER }}
+        run: |
+          set -euo pipefail
+          host="${FTP_SERVER#*://}"
+          host="${host%%/*}"
+          host="${host%%:*}"
+          [ -n "$host" ] || { echo 'FTP server address is invalid'; exit 1; }
+          echo "host=$host" >> "$GITHUB_OUTPUT"
+
       - name: Enforce manual-approval messaging policy
         shell: bash
         run: |
@@ -50,7 +63,7 @@ jobs:
       - name: Upload Command Center without deleting server-only config
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.IRANSERVER_FTP_SERVER }}
+          server: ${{ steps.ftp-host.outputs.host }}
           username: ${{ secrets.IRANSERVER_FTP_USERNAME }}
           password: ${{ secrets.IRANSERVER_FTP_PASSWORD }}
           local-dir: ./deploy-app/
