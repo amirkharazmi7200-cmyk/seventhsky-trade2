@@ -59,6 +59,7 @@ jobs:
             deploy-app/backend-client.js \
             deploy-app/automation-status.html \
             deploy-app/api-proxy.php \
+            tools/test-app-connection.mjs \
             tools/market_radar.py \
             data/leads.json; do
             test -s "$f" || { echo "Missing or empty: $f"; exit 1; }
@@ -67,6 +68,8 @@ jobs:
         run: |
           python -m json.tool data/leads.json >/dev/null
           python -m json.tool manifest.webmanifest >/dev/null
+      - name: Verify production connection lifecycle
+        run: node tools/test-app-connection.mjs
       - name: Verify central backend package guards
         shell: bash
         run: |

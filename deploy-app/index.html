@@ -30,7 +30,7 @@
             <h2 id="overview-title">وضعیت عملیاتی</h2>
             <div id="last-sync" class="eyebrow">در حال دریافت داده زنده…</div>
           </div>
-          <span class="pill tag good">● LIVE DATA</span>
+          <span id="data-status" class="pill tag" role="status">در حال بررسی اتصال…</span>
         </div>
         <div class="kpis">
           <div class="kpi"><b id="radar-total">—</b><span>سیگنال رادار</span></div>
@@ -141,7 +141,7 @@
 
     <div id="toast" class="toast hidden" role="status"></div>
 
-    <script src="backend-client.js?v=20260904-radar"></script>
+    <script src="backend-client.js?v=20260905-connection"></script>
     <script>
       const $ = (id) => document.getElementById(id);
       const state = {
@@ -151,6 +151,7 @@
         radarStates: new Map(),
         selectedRadarId: null,
         view: "radar",
+        ready: false,
       };
 
       function esc(value) {
@@ -598,11 +599,18 @@
         }
       }
 
+      function setConnection(connected, detail) {
+        $("live").textContent = connected ? "متصل ✓" : "خطای اتصال";
+        $("live").classList.remove("ok", "bad");
+        $("live").classList.add(connected ? "ok" : "bad");
+        $("data-status").textContent = connected ? "● داده‌ها دریافت شد" : "داده‌ها به‌روز نیستند";
+        $("data-status").className = `pill tag ${connected ? "good" : "bad"}`;
+        $("last-sync").textContent = detail;
+      }
+
       async function boot() {
         try {
           await SevenSkyAPI.health();
-          $("live").textContent = "متصل ✓";
-          $("live").classList.add("ok");
 
           const [leadRows, inboxEvents] = await Promise.all([
             SevenSkyAPI.leads(),
@@ -614,12 +622,13 @@
             .filter((row) => row.source === "market_radar" && row.radar === true)
             .sort((a, b) => String(b.receivedAt || b.firstSeenAt || "").localeCompare(String(a.receivedAt || a.firstSeenAt || "")));
 
-          const leadStatePairs = await Promise.all(state.leads.map(async (row) => [row.id, await SevenSkyAPI.state(row.id).catch(() => null)]));
+          const leadStatePairs = await Promise.all(state.leads.map(async (row) => [row.id, await SevenSkyAPI.state(row.id)]));
           leadStatePairs.forEach(([id, value]) => state.leadStates.set(id, value || {}));
-          const radarStatePairs = await Promise.all(state.radar.map(async (row) => [row.id, await SevenSkyAPI.state(row.id).catch(() => null)]));
+          const radarStatePairs = await Promise.all(state.radar.map(async (row) => [row.id, await SevenSkyAPI.state(row.id)]));
           radarStatePairs.forEach(([id, value]) => state.radarStates.set(id, value || {}));
 
-          $("last-sync").textContent = `آخرین همگام‌سازی: ${new Intl.DateTimeFormat("fa-IR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}`;
+          state.ready = true;
+          setConnection(true, `آخرین همگام‌سازی: ${new Intl.DateTimeFormat("fa-IR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}`);
           renderOverview();
           renderRadar();
           renderBuyers();
@@ -627,15 +636,15 @@
           const initial = ["radar", "buyers", "actions"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "radar";
           setView(initial);
         } catch (error) {
-          $("live").textContent = "خطای اتصال";
-          $("live").classList.add("bad");
-          $("last-sync").textContent = error.message;
+          state.ready = false;
+          setConnection(false, error.message);
           $("radar-list").innerHTML = `<div class="error-box">اتصال به داده زنده برقرار نشد: ${esc(error.message)}</div>`;
           $("buyer-list").innerHTML = `<div class="error-box">دریافت پرونده‌ها انجام نشد.</div>`;
         }
       }
 
       async function refreshRadarOnly() {
+        if (!state.ready) return boot();
         try {
           const inboxEvents = await SevenSkyAPI.inbox(300, "market_radar");
           const rows = inboxEvents
@@ -643,15 +652,15 @@
             .filter((row) => row.source === "market_radar" && row.radar === true)
             .sort((a, b) => String(b.receivedAt || b.firstSeenAt || "").localeCompare(String(a.receivedAt || a.firstSeenAt || "")));
           const unseen = rows.filter((row) => !state.radarStates.has(row.id));
-          const pairs = await Promise.all(unseen.map(async (row) => [row.id, await SevenSkyAPI.state(row.id).catch(() => null)]));
+          const pairs = await Promise.all(unseen.map(async (row) => [row.id, await SevenSkyAPI.state(row.id)]));
           pairs.forEach(([id, value]) => state.radarStates.set(id, value || {}));
           state.radar = rows;
-          $("last-sync").textContent = `آخرین همگام‌سازی: ${new Intl.DateTimeFormat("fa-IR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}`;
+          setConnection(true, `آخرین دریافت رادار: ${new Intl.DateTimeFormat("fa-IR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}`);
           renderOverview();
           renderRadar();
           if (state.view === "actions") renderToday();
-        } catch (_) {
-          $("last-sync").textContent = "به‌روزرسانی لحظه‌ای ناموفق بود؛ داده قبلی حفظ شد.";
+        } catch (error) {
+          setConnection(false, `به‌روزرسانی انجام نشد؛ داده قبلی حفظ شد. ${error.message}`);
         }
       }
 

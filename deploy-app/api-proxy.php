@@ -10,11 +10,21 @@ if (!is_file($configFile)) {
     exit;
 }
 $config = require $configFile;
-$backend = rtrim((string)($config['backend_base'] ?? ''), '/');
-$token = (string)($config['api_token'] ?? '');
-if ($backend === '' || $token === '') {
+$backend = rtrim(trim((string)($config['backend_base'] ?? '')), '/');
+$token = trim((string)($config['api_token'] ?? ''));
+if ($backend === '') {
     http_response_code(503);
     echo json_encode(['ok'=>false,'error'=>'app_proxy_not_configured']);
+    exit;
+}
+if ($token === '' || preg_match('/^(PASTE_|CHANGE_ME)/i', $token)) {
+    http_response_code(503);
+    echo json_encode(['ok'=>false,'error'=>'app_proxy_token_missing']);
+    exit;
+}
+if (!function_exists('curl_init')) {
+    http_response_code(503);
+    echo json_encode(['ok'=>false,'error'=>'proxy_transport_unavailable']);
     exit;
 }
 
@@ -33,7 +43,7 @@ $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 $body = file_get_contents('php://input');
 
 $ch = curl_init($url);
-$headers = ['Accept: application/json','Authorization: Bearer ' . $token];
+$headers = ['Accept: application/json','Authorization: Bearer ' . $token,'X-7Sky-Key: ' . $token];
 if (in_array($method, ['POST','PUT','PATCH','DELETE'], true)) {
     $headers[] = 'Content-Type: application/json';
     curl_setopt($ch, CURLOPT_POSTFIELDS, $body === false ? '' : $body);
