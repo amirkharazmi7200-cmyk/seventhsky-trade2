@@ -18,6 +18,15 @@ if ($backend === '') {
     exit;
 }
 if ($token === '' || preg_match('/^(PASTE_|CHANGE_ME)/i', $token)) {
+    // Both subdomains run under the same DirectAdmin account. Keep the real
+    // token in one protected backend config instead of duplicating it here.
+    $sharedBackendConfig = dirname(__DIR__, 2) . '/command.7skytrade.com/public_html/config.php';
+    if (is_file($sharedBackendConfig)) {
+        $backendConfig = require $sharedBackendConfig;
+        $token = trim((string)($backendConfig['api_token'] ?? ''));
+    }
+}
+if ($token === '' || preg_match('/^(PASTE_|CHANGE_ME)/i', $token)) {
     http_response_code(503);
     echo json_encode(['ok'=>false,'error'=>'app_proxy_token_missing']);
     exit;
